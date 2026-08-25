@@ -3,13 +3,13 @@
 .idea/
 .vscode/
 
-# Package manager caches at repo root
-.pnpm-store/
-
 # Env secrets if ever placed at root
 .env
 .env.*
 !.env.example
+
+# Package manager caches at repo root
+.pnpm-store/
 
 # Python / Node caches if created at root
 __pycache__/
@@ -17,3 +17,4 @@ __pycache__/
 .ruff_cache/
 *.egg-info/
 node_modules/
+.venv/
