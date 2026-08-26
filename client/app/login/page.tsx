@@ -39,20 +39,24 @@ export default function LoginPage() {
     }
   }
 
+  const fieldClass =
+    'border-input bg-card text-foreground mt-2 w-full border px-4 py-3 text-sm outline-none focus:border-primary';
+
   return (
-    <div className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-4 py-16">
-      <p className="text-primary text-center font-mono text-xs font-bold tracking-[0.2em] uppercase">
-        Podium
-      </p>
-      <h1 className="text-foreground mt-3 text-center text-2xl font-semibold tracking-tight">
+    <div className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-5 py-16">
+      <p className="kicker text-center">Podium</p>
+      <h1 className="font-display text-foreground mt-4 text-center text-4xl font-extrabold tracking-tight uppercase">
         {mode === 'login' ? 'Sign in' : 'Create account'}
       </h1>
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
+      <p className="text-muted-foreground mt-3 text-center text-sm leading-relaxed">
+        Practice against a live audience. Scores stay with your account.
+      </p>
+      <form onSubmit={onSubmit} className="mt-10 space-y-5">
         {mode === 'register' && (
           <div>
-            <label className="text-foreground text-sm font-medium">Display name</label>
+            <label className="kicker">Display name</label>
             <input
-              className="border-input bg-background mt-1 w-full rounded-md border px-3 py-2 text-sm"
+              className={fieldClass}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               autoComplete="name"
@@ -60,23 +64,23 @@ export default function LoginPage() {
           </div>
         )}
         <div>
-          <label className="text-foreground text-sm font-medium">Email</label>
+          <label className="kicker">Email</label>
           <input
             type="email"
             required
-            className="border-input bg-background mt-1 w-full rounded-md border px-3 py-2 text-sm"
+            className={fieldClass}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
           />
         </div>
         <div>
-          <label className="text-foreground text-sm font-medium">Password</label>
+          <label className="kicker">Password</label>
           <input
             type="password"
             required
             minLength={8}
-            className="border-input bg-background mt-1 w-full rounded-md border px-3 py-2 text-sm"
+            className={fieldClass}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -87,13 +91,14 @@ export default function LoginPage() {
             {error}
           </p>
         )}
-        <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>
+          <span className="stitch" aria-hidden />
+          {busy ? 'Please wait…' : mode === 'login' ? 'Sign in →' : 'Create account →'}
         </Button>
       </form>
       <button
         type="button"
-        className="text-muted-foreground mt-4 text-center text-sm underline"
+        className="text-muted-foreground hover:text-primary mt-6 text-center font-mono text-[10px] tracking-[0.16em] uppercase"
         onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
       >
         {mode === 'login' ? 'Need an account? Register' : 'Already have an account? Sign in'}

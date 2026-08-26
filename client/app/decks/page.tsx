@@ -37,29 +37,37 @@ export default function DecksPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pt-24 pb-16">
-      <div className="flex items-center justify-between gap-4">
+    <div className="mx-auto w-full max-w-3xl px-5 py-12 md:px-10 md:py-16">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Decks</h1>
+          <p className="kicker">Library</p>
+          <h1 className="font-display text-foreground mt-3 text-4xl font-extrabold tracking-tight uppercase">
+            Decks
+          </h1>
           <p className="text-muted-foreground mt-2 text-sm">Your saved PowerPoint library.</p>
         </div>
         <Button asChild>
-          <Link href="/practice">Upload & practice</Link>
+          <Link href="/practice">
+            <span className="stitch" aria-hidden />
+            Upload & practice →
+          </Link>
         </Button>
       </div>
       {error && <p className="text-destructive mt-4 text-sm">{error}</p>}
-      <ul className="mt-8 space-y-2">
+      <ul className="border-hair mt-10 border-t">
         {decks.length === 0 ? (
-          <li className="text-muted-foreground text-sm">No decks uploaded yet.</li>
+          <li className="text-muted-foreground border-hair border-b py-4 text-sm">
+            No decks uploaded yet.
+          </li>
         ) : (
           decks.map((deck) => (
             <li
               key={deck.id}
-              className="border-border flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3"
+              className="border-hair flex flex-wrap items-center justify-between gap-3 border-b py-4"
             >
               <div>
                 <p className="text-sm font-medium">{deck.file_name}</p>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-faint mt-0.5 font-mono text-[10px] tracking-wide uppercase">
                   {deck.slide_count} slides · {new Date(deck.created_at).toLocaleDateString()}
                 </p>
               </div>

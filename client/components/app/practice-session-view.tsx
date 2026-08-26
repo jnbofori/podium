@@ -58,16 +58,16 @@ export function PracticeSessionView({
   return (
     <div className="relative h-full w-full">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex justify-center p-4 md:p-6">
-        <div className="bg-background/90 border-border pointer-events-auto max-w-xl rounded-lg border px-4 py-3 shadow-sm backdrop-blur">
-          <p className="text-center font-mono text-[10px] font-bold tracking-[0.18em] uppercase">
+        <div className="bg-background/90 border-hair pointer-events-auto max-w-xl border px-5 py-4 backdrop-blur">
+          <p className="kicker text-center">
             {phase === 'present' ? 'Presenting' : 'Q&A'} · {personaLabel}
           </p>
-          <p className="text-muted-foreground mt-1 text-center text-xs leading-5">
+          <p className="text-muted-foreground mt-2 text-center text-xs leading-5">
             {phase === 'present'
               ? 'Your audience is listening silently. Present your deck, then start Q&A when ready.'
               : 'Answer one question at a time. When finished, request your feedback report.'}
           </p>
-          <div className="mt-3 flex justify-center">
+          <div className="mt-4 flex justify-center">
             {phase === 'present' ? (
               <Button
                 size="sm"

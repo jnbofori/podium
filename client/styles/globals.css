@@ -5,78 +5,92 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.15rem;
+  /* Stage ink — light mode still readable, brand defaults dark */
+  --background: oklch(0.97 0.01 95);
+  --foreground: oklch(0.18 0.02 260);
+  --card: oklch(0.99 0.005 95);
+  --card-foreground: oklch(0.18 0.02 260);
+  --popover: oklch(0.99 0.005 95);
+  --popover-foreground: oklch(0.18 0.02 260);
+  --primary: oklch(0.72 0.14 85);
+  --primary-foreground: oklch(0.18 0.02 260);
+  --secondary: oklch(0.93 0.01 95);
+  --secondary-foreground: oklch(0.22 0.02 260);
+  --muted: oklch(0.93 0.01 95);
+  --muted-foreground: oklch(0.45 0.02 260);
+  --accent: oklch(0.93 0.02 85);
+  --accent-foreground: oklch(0.22 0.02 260);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.18 0.02 260 / 12%);
+  --input: oklch(0.18 0.02 260 / 14%);
+  --ring: oklch(0.72 0.14 85);
+  --rail: oklch(0.94 0.01 95);
+  --rail-foreground: oklch(0.18 0.02 260);
+  --faint: oklch(0.55 0.015 260);
+  --hair: oklch(0.18 0.02 260 / 10%);
+  --chart-1: oklch(0.72 0.14 85);
+  --chart-2: oklch(0.55 0.08 220);
+  --chart-3: oklch(0.45 0.05 260);
+  --chart-4: oklch(0.65 0.1 60);
+  --chart-5: oklch(0.5 0.08 30);
+  --sidebar: oklch(0.94 0.01 95);
+  --sidebar-foreground: oklch(0.18 0.02 260);
+  --sidebar-primary: oklch(0.72 0.14 85);
+  --sidebar-primary-foreground: oklch(0.18 0.02 260);
+  --sidebar-accent: oklch(0.93 0.01 95);
+  --sidebar-accent-foreground: oklch(0.22 0.02 260);
+  --sidebar-border: oklch(0.18 0.02 260 / 10%);
+  --sidebar-ring: oklch(0.72 0.14 85);
+  --atmosphere-a: oklch(0.72 0.14 85 / 8%);
+  --atmosphere-b: oklch(0.55 0.06 240 / 6%);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.269 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.439 0 0);
+  --background: oklch(0.14 0.015 260);
+  --foreground: oklch(0.93 0.015 95);
+  --card: oklch(0.17 0.015 260);
+  --card-foreground: oklch(0.93 0.015 95);
+  --popover: oklch(0.17 0.015 260);
+  --popover-foreground: oklch(0.93 0.015 95);
+  --primary: oklch(0.82 0.14 85);
+  --primary-foreground: oklch(0.16 0.02 260);
+  --secondary: oklch(0.22 0.015 260);
+  --secondary-foreground: oklch(0.93 0.015 95);
+  --muted: oklch(0.22 0.015 260);
+  --muted-foreground: oklch(0.68 0.02 95);
+  --accent: oklch(0.24 0.02 85);
+  --accent-foreground: oklch(0.93 0.015 95);
+  --destructive: oklch(0.65 0.18 25);
+  --border: oklch(0.93 0.015 95 / 12%);
+  --input: oklch(0.93 0.015 95 / 14%);
+  --ring: oklch(0.82 0.14 85);
+  --rail: oklch(0.16 0.015 260);
+  --rail-foreground: oklch(0.93 0.015 95);
+  --faint: oklch(0.5 0.02 95);
+  --hair: oklch(0.93 0.015 95 / 10%);
+  --chart-1: oklch(0.82 0.14 85);
+  --chart-2: oklch(0.65 0.08 220);
+  --chart-3: oklch(0.55 0.05 260);
+  --chart-4: oklch(0.7 0.1 60);
+  --chart-5: oklch(0.6 0.1 30);
+  --sidebar: oklch(0.16 0.015 260);
+  --sidebar-foreground: oklch(0.93 0.015 95);
+  --sidebar-primary: oklch(0.82 0.14 85);
+  --sidebar-primary-foreground: oklch(0.16 0.02 260);
+  --sidebar-accent: oklch(0.22 0.015 260);
+  --sidebar-accent-foreground: oklch(0.93 0.015 95);
+  --sidebar-border: oklch(0.93 0.015 95 / 10%);
+  --sidebar-ring: oklch(0.82 0.14 85);
+  --atmosphere-a: oklch(0.82 0.14 85 / 10%);
+  --atmosphere-b: oklch(0.45 0.08 240 / 12%);
 }
 
 @theme inline {
   --font-sans:
-    var(--font-public-sans), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-display: var(--font-syne), ui-sans-serif, system-ui, sans-serif;
   --font-mono:
     var(--font-commit-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     'Liberation Mono', 'Courier New', monospace;
@@ -99,6 +113,10 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-rail: var(--rail);
+  --color-rail-foreground: var(--rail-foreground);
+  --color-faint: var(--faint);
+  --color-hair: var(--hair);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -116,9 +134,78 @@
 
 @layer base {
   * {
-    @apply border-foreground/20 outline-ring/50;
+    @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .kicker {
+    @apply font-mono text-[10px] font-semibold tracking-[0.22em] uppercase text-muted-foreground;
+  }
+
+  .atmosphere {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 100% -10%, var(--atmosphere-a), transparent 55%),
+      radial-gradient(ellipse 60% 40% at -10% 80%, var(--atmosphere-b), transparent 50%),
+      linear-gradient(
+        135deg,
+        transparent 0%,
+        transparent 40%,
+        oklch(0.5 0.02 260 / 3%) 40%,
+        oklch(0.5 0.02 260 / 3%) 41%,
+        transparent 41%
+      );
+    background-size:
+      auto,
+      auto,
+      24px 24px;
+  }
+
+  .stitch {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 9px;
+    height: 2px;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+      90deg,
+      currentColor 0 6px,
+      transparent 6px 12px
+    );
+    clip-path: inset(0 100% 0 0);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .stitch {
+      transition: clip-path 0.55s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .group\/cta:hover .stitch {
+      clip-path: inset(0 0 0 0);
+      animation: stitch-run 1.2s linear infinite;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .group\/cta:hover .stitch {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes stitch-run {
+    to {
+      background-position: 12px 0;
+    }
   }
 }

@@ -27,6 +27,8 @@ interface SetupViewProps {
   }) => void | Promise<void>;
 }
 
+type SetupStep = 1 | 2 | 3;
+
 export function SetupView({
   startButtonText,
   initialDeckId,
@@ -34,6 +36,7 @@ export function SetupView({
   ref,
 }: React.ComponentProps<'div'> & SetupViewProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [step, setStep] = useState<SetupStep>(1);
   const [persona, setPersona] = useState<AudiencePersonaId>('executive');
   const [library, setLibrary] = useState<ApiDeck[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(initialDeckId ?? null);
@@ -55,6 +58,11 @@ export function SetupView({
       });
   }, [initialDeckId]);
 
+  const selectedDeck =
+    uploaded && uploaded.id === selectedDeckId
+      ? uploaded
+      : library.find((d) => d.id === selectedDeckId) ?? null;
+
   async function handleFileChange(file: File | undefined) {
     if (!file) return;
     setError(null);
@@ -73,11 +81,7 @@ export function SetupView({
   }
 
   async function handleStart() {
-    const deck =
-      uploaded && uploaded.id === selectedDeckId
-        ? uploaded
-        : library.find((d) => d.id === selectedDeckId);
-    if (!deck) {
+    if (!selectedDeck) {
       setError('Upload or select a PowerPoint deck to begin');
       return;
     }
@@ -87,10 +91,10 @@ export function SetupView({
       await onStart({
         persona,
         deck: {
-          id: deck.id,
-          fileName: deck.file_name,
-          plainText: deck.plain_text,
-          slideCount: deck.slide_count,
+          id: selectedDeck.id,
+          fileName: selectedDeck.file_name,
+          plainText: selectedDeck.plain_text,
+          slideCount: selectedDeck.slide_count,
         },
       });
     } catch (err) {
@@ -99,132 +103,246 @@ export function SetupView({
     }
   }
 
+  const personaLabel =
+    AUDIENCE_PERSONAS.find((option) => option.id === persona)?.label ?? persona;
+
   return (
-    <div ref={ref} className="mx-auto w-full max-w-2xl px-4 py-16 md:py-24">
-      <section className="flex flex-col items-center text-center">
-        <p className="text-primary font-mono text-xs font-bold tracking-[0.2em] uppercase">Podium</p>
-        <h1 className="text-foreground mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-          Practice your presentation
-        </h1>
-        <p className="text-muted-foreground mt-3 max-w-prose text-sm leading-6 md:text-base">
-          Choose a saved deck or upload a new one, pick an audience, then present.
+    <div ref={ref} className="mx-auto w-full max-w-3xl px-5 py-8 md:px-10 md:py-10">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="kicker">Practice session — made to order</p>
+          <h1 className="font-display text-foreground mt-3 max-w-[12ch] text-3xl leading-[0.95] font-extrabold tracking-tight uppercase md:text-4xl">
+            Your deck, your audience.
+          </h1>
+        </div>
+        <p className="text-faint font-mono text-[9.5px] tracking-[0.16em] uppercase">
+          3 steps · ~2 min · live feedback
         </p>
-      </section>
+      </header>
 
-      <div className="mt-10 space-y-8 text-left">
-        <div>
-          <label className="text-foreground text-sm font-medium">1. Deck</label>
-          {library.length > 0 && (
-            <div className="mt-2 space-y-2">
-              {library.slice(0, 8).map((deck) => (
-                <button
-                  key={deck.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDeckId(deck.id);
-                    setUploaded(null);
-                  }}
-                  className={cn(
-                    'w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors',
-                    selectedDeckId === deck.id
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:bg-muted/40'
-                  )}
-                >
-                  <div className="font-medium">{deck.file_name}</div>
-                  <div className="text-muted-foreground text-xs">{deck.slide_count} slides</div>
-                </button>
-              ))}
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
+      <p className="text-muted-foreground mt-4 max-w-[42ch] text-sm leading-relaxed">
+        Upload a deck, pick who you&apos;re pitching to, then present. The room listens first —
+        questions come when you&apos;re ready.
+      </p>
+
+      <ol className="border-hair mt-8 grid border-t sm:grid-cols-3">
+        {(
+          [
+            { n: 1, title: 'Choose your deck' },
+            { n: 2, title: 'Pick an audience' },
+            { n: 3, title: 'Start practice' },
+          ] as const
+        ).map((item, index) => (
+          <li
+            key={item.n}
             className={cn(
-              'border-border bg-background hover:bg-muted/40 mt-2 flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-8 transition-colors',
-              uploaded && 'border-primary/40 bg-primary/5'
+              'border-hair px-0 py-4 sm:px-5 sm:py-5',
+              index > 0 && 'sm:border-l',
+              step === item.n && 'opacity-100',
+              step !== item.n && 'opacity-50'
             )}
           >
-            {parsing ? (
-              <SpinnerGapIcon className="text-muted-foreground size-8 animate-spin" />
-            ) : uploaded ? (
-              <FilePptIcon className="text-primary size-8" weight="duotone" />
-            ) : (
-              <UploadSimpleIcon className="text-muted-foreground size-8" />
+            <button
+              type="button"
+              className="w-full text-left"
+              onClick={() => {
+                if (item.n === 1 || (item.n === 2 && selectedDeckId) || (item.n === 3 && selectedDeckId)) {
+                  setStep(item.n);
+                }
+              }}
+            >
+              <div className="font-mono text-2xl text-primary">
+                {String(item.n).padStart(2, '0')}
+              </div>
+              <div className="mt-1.5 text-sm font-semibold">{item.title}</div>
+            </button>
+          </li>
+        ))}
+      </ol>
+
+      <div className="border-hair mt-2 border-t pt-6">
+        {step === 1 && (
+          <section>
+            <p className="kicker">01 — Deck</p>
+            {library.length > 0 && (
+              <div className="mt-3 max-h-[28vh] space-y-0 overflow-y-auto">
+                {library.slice(0, 8).map((deck) => (
+                  <button
+                    key={deck.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDeckId(deck.id);
+                      setUploaded(null);
+                    }}
+                    className={cn(
+                      'border-hair hover:bg-primary/5 flex w-full items-center justify-between border-b px-1 py-3 text-left text-sm transition-colors',
+                      selectedDeckId === deck.id && 'bg-primary/5 text-foreground'
+                    )}
+                  >
+                    <div>
+                      <div className="font-medium">{deck.file_name}</div>
+                      <div className="text-muted-foreground mt-0.5 font-mono text-[10px] tracking-wide uppercase">
+                        {deck.slide_count} slides
+                      </div>
+                    </div>
+                    {selectedDeckId === deck.id && (
+                      <span className="text-primary font-mono text-[10px] tracking-[0.16em] uppercase">
+                        Selected
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
             )}
-            <span className="text-foreground text-sm font-medium">
-              {parsing
-                ? 'Uploading & extracting…'
-                : uploaded
-                  ? uploaded.file_name
-                  : 'Upload a new .pptx'}
-            </span>
-          </button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            className="hidden"
-            onChange={(event) => void handleFileChange(event.target.files?.[0])}
-          />
-        </div>
-
-        <div>
-          <label className="text-foreground text-sm font-medium">2. Choose your audience</label>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {AUDIENCE_PERSONAS.map((option) => {
-              const selected = persona === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setPersona(option.id)}
-                  className={cn(
-                    'rounded-lg border px-4 py-3 text-left transition-colors',
-                    selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'
-                  )}
-                >
-                  <div className="text-foreground text-sm font-medium">{option.label}</div>
-                  <div className="text-muted-foreground mt-1 text-xs leading-5">
-                    {option.description}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <select
-            className="sr-only"
-            value={persona}
-            onChange={(event) => {
-              if (isAudiencePersonaId(event.target.value)) {
-                setPersona(event.target.value);
-              }
-            }}
-            aria-hidden
-            tabIndex={-1}
-          >
-            {AUDIENCE_PERSONAS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {error && (
-          <p className="text-destructive text-sm" role="alert">
-            {error}
-          </p>
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className={cn(
+                'border-hair hover:border-primary/40 mt-4 flex w-full flex-col items-center justify-center gap-1.5 border border-dashed px-6 py-6 transition-colors',
+                uploaded && 'border-primary/50 bg-primary/5'
+              )}
+            >
+              {parsing ? (
+                <SpinnerGapIcon className="text-muted-foreground size-6 animate-spin" />
+              ) : uploaded ? (
+                <FilePptIcon className="text-primary size-6" weight="duotone" />
+              ) : (
+                <UploadSimpleIcon className="text-muted-foreground size-6" />
+              )}
+              <span className="text-foreground text-sm font-medium">
+                {parsing
+                  ? 'Uploading & extracting…'
+                  : uploaded
+                    ? uploaded.file_name
+                    : 'Upload a new .pptx'}
+              </span>
+            </button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+              className="hidden"
+              onChange={(event) => void handleFileChange(event.target.files?.[0])}
+            />
+            {error && (
+              <p className="text-destructive mt-3 text-sm" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="mt-6 flex gap-3">
+              <Button
+                size="lg"
+                className="flex-1"
+                disabled={!selectedDeckId || parsing}
+                onClick={() => setStep(2)}
+              >
+                <span className="stitch" aria-hidden />
+                Continue →
+              </Button>
+            </div>
+          </section>
         )}
 
-        <Button
-          size="lg"
-          className="w-full rounded-full font-mono text-xs font-bold tracking-wider uppercase"
-          disabled={!selectedDeckId || parsing || starting}
-          onClick={() => void handleStart()}
-        >
-          {starting ? 'Connecting…' : startButtonText}
-        </Button>
+        {step === 2 && (
+          <section>
+            <p className="kicker">02 — Audience</p>
+            <div className="mt-3 grid gap-0 sm:grid-cols-2">
+              {AUDIENCE_PERSONAS.map((option) => {
+                const selected = persona === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setPersona(option.id)}
+                    className={cn(
+                      'border-hair hover:bg-primary/5 border-b px-1 py-3 text-left transition-colors sm:odd:border-r sm:px-4',
+                      selected && 'bg-primary/5'
+                    )}
+                  >
+                    <div className="text-foreground text-sm font-semibold">{option.label}</div>
+                    <div className="text-muted-foreground mt-0.5 text-xs leading-snug">
+                      {option.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <select
+              className="sr-only"
+              value={persona}
+              onChange={(event) => {
+                if (isAudiencePersonaId(event.target.value)) {
+                  setPersona(event.target.value);
+                }
+              }}
+              aria-hidden
+              tabIndex={-1}
+            >
+              {AUDIENCE_PERSONAS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+              <Button size="lg" variant="outline" onClick={() => setStep(1)}>
+                Back
+              </Button>
+              <Button size="lg" className="flex-1" onClick={() => setStep(3)}>
+                <span className="stitch" aria-hidden />
+                Continue →
+              </Button>
+            </div>
+          </section>
+        )}
+
+        {step === 3 && (
+          <section>
+            <p className="kicker">03 — Confirm</p>
+            <div className="border-hair mt-3 border-y py-5">
+              <dl className="space-y-3">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt className="text-faint font-mono text-[10px] tracking-[0.16em] uppercase">
+                    Deck
+                  </dt>
+                  <dd className="text-sm font-medium">
+                    {selectedDeck?.file_name ?? '—'}
+                    {selectedDeck ? (
+                      <span className="text-muted-foreground ml-2 font-mono text-[10px]">
+                        {selectedDeck.slide_count} slides
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt className="text-faint font-mono text-[10px] tracking-[0.16em] uppercase">
+                    Audience
+                  </dt>
+                  <dd className="text-sm font-medium">{personaLabel}</dd>
+                </div>
+              </dl>
+            </div>
+            {error && (
+              <p className="text-destructive mt-3 text-sm" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+              <Button size="lg" variant="outline" onClick={() => setStep(2)}>
+                Back
+              </Button>
+              <Button
+                size="lg"
+                className="flex-1"
+                disabled={!selectedDeckId || parsing || starting}
+                onClick={() => void handleStart()}
+              >
+                <span className="stitch" aria-hidden />
+                {starting ? 'Connecting…' : startButtonText}
+              </Button>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

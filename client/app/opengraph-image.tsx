@@ -107,8 +107,8 @@ export default async function Image() {
 
   const pageTitle = cleanPageTitle(appConfig.pageTitle);
   const logoUri = appConfig.logoDark || appConfig.logo;
-  const isLogoUriLocal = logoUri.includes('lk-logo');
-  const wordmarkUri = logoUri === APP_CONFIG_DEFAULTS.logoDark ? 'public/lk-wordmark.svg' : logoUri;
+  const isLiveKitLogo = logoUri.includes('lk-logo');
+  const wordmarkUri = isLiveKitLogo ? 'public/lk-wordmark.svg' : logoUri;
 
   // Load fonts - use file system in dev, fetch in production
   let commitMonoData: ArrayBuffer | undefined;
@@ -126,15 +126,16 @@ export default async function Image() {
   const { base64: bgSrcBase64 } = await getImageData('public/opengraph-image-bg.png');
 
   // wordmark
-  const { base64: wordmarkSrcBase64, dimensions: wordmarkDimensions } = isLogoUriLocal
+  const { base64: wordmarkSrcBase64, dimensions: wordmarkDimensions } = isLiveKitLogo
     ? await getImageData(wordmarkUri)
-    : await getImageData(logoUri);
-  const wordmarkSize = scaleImageSize(wordmarkDimensions, isLogoUriLocal ? 32 : 64);
+    : await getImageData(logoUri.startsWith('/') ? `public${logoUri}` : logoUri);
+  const wordmarkSize = scaleImageSize(wordmarkDimensions, isLiveKitLogo ? 32 : 64);
 
   // logo
+  const logoPath = logoUri.startsWith('/') ? `public${logoUri}` : logoUri;
   const { base64: logoSrcBase64, dimensions: logoDimensions } = await getImageData(
-    logoUri,
-    'public/lk-logo-dark.svg'
+    logoPath,
+    'public/podium-logo.png'
   );
   const logoSize = scaleImageSize(logoDimensions, 24);
 
@@ -166,7 +167,7 @@ export default async function Image() {
           }}
         >
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
-          <img src={wordmarkSrcBase64} width={wordmarkSize.width} height={wordmarkSize.height} />
+          {/* <img src={wordmarkSrcBase64} width={wordmarkSize.width} height={wordmarkSize.height} /> */}
         </div>
         {/* logo */}
         <div
