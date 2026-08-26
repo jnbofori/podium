@@ -1,6 +1,6 @@
 # Podium API
 
-FastAPI backend for auth (email/password JWT), decks (Supabase Storage), practice sessions, evaluate fallback, and LiveKit token minting.
+FastAPI backend for auth (email/password JWT), decks (Supabase Storage), practice sessions, and LiveKit token minting.
 
 ## Setup
 

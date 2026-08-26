@@ -1,6 +1,6 @@
 # Podium client
 
-Next.js UI for Podium. Auth, decks, sessions, PPTX parse, evaluate fallback, and LiveKit tokens are served by the FastAPI app in [`../api`](../api).
+Next.js UI for Podium. Auth, decks, sessions, and LiveKit tokens are served by the FastAPI app in [`../api`](../api).
 
 ## Setup
 

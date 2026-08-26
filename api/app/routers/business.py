@@ -11,7 +11,6 @@ from app.db import get_db
 from app.models import Deck, PracticeSession, User
 from app.schemas import (
     DeckOut,
-    EvaluateRequest,
     LiveKitTokenRequest,
     LiveKitTokenResponse,
     SessionCreate,
@@ -19,7 +18,7 @@ from app.schemas import (
     SessionUpdate,
 )
 from app.security import get_current_user
-from app.services.evaluate import average_score, build_heuristic_report
+from app.services.evaluate import average_score
 from app.services.livekit_tokens import mint_livekit_token
 from app.services.pptx import parse_pptx
 from app.services.storage import delete_deck_file, upload_deck_file
@@ -272,26 +271,4 @@ async def livekit_token(
         participant_name=payload["participant_name"],
         participant_token=payload["participant_token"],
         session_id=payload["session_id"],
-    )
-
-
-@router.post("/evaluate")
-async def evaluate(
-    body: EvaluateRequest,
-    user: User = Depends(get_current_user),
-):
-    _ = user
-    persona = body.persona if body.persona in PERSONAS else "executive"
-    transcript = [
-        {
-            "role": item.role,
-            "content": item.content,
-            "timestampSec": item.timestamp_sec,
-        }
-        for item in body.transcript
-    ]
-    return build_heuristic_report(
-        persona=persona,
-        transcript=transcript,
-        phase_boundary_sec=body.phase_boundary_sec,
     )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import timedelta
 
 from livekit.api import AccessToken, VideoGrants
 from livekit.protocol.agent_dispatch import RoomAgentDispatch
@@ -49,7 +50,7 @@ def mint_livekit_token(
                 can_publish_data=True,
             )
         )
-        .with_ttl(60 * 15)
+        .with_ttl(timedelta(minutes=15))
         .with_room_config(
             RoomConfiguration(
                 agents=[

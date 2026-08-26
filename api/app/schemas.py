@@ -55,6 +55,8 @@ class SessionUpdate(BaseModel):
     status: str | None = None
     room_name: str | None = None
 
+    model_config = ConfigDict(extra="ignore")
+
 
 class SessionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -81,20 +83,3 @@ class LiveKitTokenResponse(BaseModel):
     participant_name: str
     participant_token: str
     session_id: uuid.UUID
-
-
-class TranscriptItem(BaseModel):
-    role: str
-    content: str
-    timestamp_sec: float | None = Field(default=None, alias="timestampSec")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class EvaluateRequest(BaseModel):
-    persona: str | None = None
-    deck_plain_text: str | None = Field(default=None, alias="deckPlainText")
-    transcript: list[TranscriptItem] = Field(default_factory=list)
-    phase_boundary_sec: float | None = Field(default=None, alias="phaseBoundarySec")
-
-    model_config = ConfigDict(populate_by_name=True)

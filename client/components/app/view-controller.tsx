@@ -2,19 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useSessionContext, useSessionMessages } from '@livekit/components-react';
+import { useSessionContext } from '@livekit/components-react';
 import { useRouter } from 'next/navigation';
 import type { AppConfig } from '@/app-config';
 import { FeedbackView } from '@/components/app/feedback-view';
 import { PracticeSessionView } from '@/components/app/practice-session-view';
 import { SetupView, type PracticeDeckSelection } from '@/components/app/setup-view';
+import { Button } from '@/components/ui/button';
 import { usePodiumRoomEvents } from '@/hooks/use-podium-room';
-import { evaluateFallback, patchSession } from '@/lib/api';
+import { patchSession } from '@/lib/api';
 import type { AudiencePersonaId, FeedbackReport, SessionPhase } from '@/lib/podium';
 
 const MotionSetupView = motion.create(SetupView);
 const MotionPracticeSessionView = motion.create(PracticeSessionView);
 const MotionFeedbackView = motion.create(FeedbackView);
+
+const FEEDBACK_TIMEOUT_MS = 90_000;
 
 const VIEW_MOTION_PROPS = {
   variants: {
@@ -45,19 +48,23 @@ export function ViewController({
 }: ViewControllerProps) {
   const router = useRouter();
   const session = useSessionContext();
-  const { messages } = useSessionMessages(session);
   const [phase, setPhase] = useState<SessionPhase>('setup');
   const [persona, setPersona] = useState<AudiencePersonaId>('executive');
-  const [deck, setDeck] = useState<PracticeDeckSelection | null>(null);
   const [report, setReport] = useState<FeedbackReport | null>(null);
   const [awaitingFeedback, setAwaitingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const phaseBoundarySecRef = useRef<number | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
   const practiceSessionIdRef = useRef<string | null>(practiceSessionId);
+  const reportRef = useRef<FeedbackReport | null>(null);
 
   useEffect(() => {
     practiceSessionIdRef.current = practiceSessionId;
   }, [practiceSessionId]);
+
+  useEffect(() => {
+    reportRef.current = report;
+  }, [report]);
 
   const persistFeedback = useCallback(async (next: FeedbackReport) => {
     const id = practiceSessionIdRef.current;
@@ -71,6 +78,7 @@ export function ViewController({
 
   const handleFeedback = useCallback(
     (next: FeedbackReport) => {
+      setFeedbackError(null);
       setReport(next);
       setAwaitingFeedback(false);
       setPhase('feedback');
@@ -109,56 +117,43 @@ export function ViewController({
       !session.isConnected &&
       (phase === 'present' || phase === 'qa') &&
       !awaitingFeedback &&
-      !report
+      !report &&
+      !feedbackError
     ) {
       setPhase('setup');
     }
-  }, [session.isConnected, phase, awaitingFeedback, report]);
-
-  async function requestFallbackEvaluation() {
-    if (!deck) return;
-    const startedAt = sessionStartedAtRef.current ?? Date.now();
-    const transcript = messages.map((message, index) => ({
-      role: message.from?.isLocal ? 'user' : 'assistant',
-      content: message.message,
-      timestampSec: Math.max(0, (Date.now() - startedAt) / 1000 - (messages.length - index) * 8),
-    }));
-
-    const payload = (await evaluateFallback({
-      persona,
-      deckPlainText: deck.plainText,
-      transcript,
-      phaseBoundarySec: phaseBoundarySecRef.current ?? undefined,
-    })) as FeedbackReport;
-
-    setReport(payload);
-    setPhase('feedback');
-    setAwaitingFeedback(false);
-    await persistFeedback(payload);
-    if (session.isConnected) {
-      void session.end();
-    }
-  }
+  }, [session.isConnected, phase, awaitingFeedback, report, feedbackError]);
 
   useEffect(() => {
     if (!awaitingFeedback) return;
     const timer = window.setTimeout(() => {
-      void requestFallbackEvaluation().catch((error) => {
-        console.error(error);
-        setAwaitingFeedback(false);
-      });
-    }, 8000);
+      if (reportRef.current) return;
+      setAwaitingFeedback(false);
+      setFeedbackError('Feedback timed out. Please try practicing again.');
+    }, FEEDBACK_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [awaitingFeedback]);
+
+  useEffect(() => {
+    if (!awaitingFeedback || session.isConnected || report) return;
+    // Agent shuts down after publishing; allow a brief window for the data message.
+    const timer = window.setTimeout(() => {
+      if (reportRef.current) return;
+      setAwaitingFeedback(false);
+      setFeedbackError(
+        'Connection closed before feedback arrived. Please try practicing again.'
+      );
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [awaitingFeedback, session.isConnected, report]);
 
   async function handleStart(args: {
     persona: AudiencePersonaId;
     deck: PracticeDeckSelection;
   }) {
     setPersona(args.persona);
-    setDeck(args.deck);
     setReport(null);
+    setFeedbackError(null);
     const sessionId = await onPrepareSession(args);
     practiceSessionIdRef.current = sessionId;
     await session.start();
@@ -166,8 +161,8 @@ export function ViewController({
 
   function handlePracticeAgain() {
     setReport(null);
-    setDeck(null);
     setAwaitingFeedback(false);
+    setFeedbackError(null);
     setPhase('setup');
     phaseBoundarySecRef.current = null;
     sessionStartedAtRef.current = null;
@@ -176,7 +171,7 @@ export function ViewController({
 
   return (
     <AnimatePresence mode="wait">
-      {phase === 'setup' && !session.isConnected && (
+      {phase === 'setup' && !session.isConnected && !feedbackError && (
         <MotionSetupView
           key="setup"
           {...VIEW_MOTION_PROPS}
@@ -186,7 +181,7 @@ export function ViewController({
         />
       )}
 
-      {(phase === 'present' || phase === 'qa') && session.isConnected && (
+      {(phase === 'present' || phase === 'qa') && session.isConnected && !feedbackError && (
         <MotionPracticeSessionView
           key="practice"
           {...VIEW_MOTION_PROPS}
@@ -203,11 +198,14 @@ export function ViewController({
             }
             setPhase(next);
           }}
-          onRequestFeedback={() => setAwaitingFeedback(true)}
+          onRequestFeedback={() => {
+            setFeedbackError(null);
+            setAwaitingFeedback(true);
+          }}
         />
       )}
 
-      {phase === 'feedback' && report && (
+      {phase === 'feedback' && report && !feedbackError && (
         <MotionFeedbackView
           key="feedback"
           {...VIEW_MOTION_PROPS}
@@ -216,7 +214,22 @@ export function ViewController({
         />
       )}
 
-      {awaitingFeedback && phase !== 'feedback' && (
+      {feedbackError && (
+        <motion.div
+          key="feedback-error"
+          className="mx-auto flex max-w-md flex-col items-center px-4 py-20 text-center"
+          {...VIEW_MOTION_PROPS}
+        >
+          <p className="text-destructive text-sm font-medium" role="alert">
+            {feedbackError}
+          </p>
+          <Button className="mt-6" onClick={handlePracticeAgain}>
+            Practice again
+          </Button>
+        </motion.div>
+      )}
+
+      {awaitingFeedback && !feedbackError && phase !== 'feedback' && (
         <motion.div
           key="awaiting-feedback"
           className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"

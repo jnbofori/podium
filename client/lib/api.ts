@@ -192,10 +192,3 @@ export async function getLiveKitToken(sessionId: string) {
     body: JSON.stringify({ session_id: sessionId }),
   });
 }
-
-export async function evaluateFallback(body: unknown) {
-  return apiFetch<Record<string, unknown>>('/evaluate', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-}

@@ -13,27 +13,41 @@ logger = logging.getLogger("podium.evaluator")
 
 FILLER_RE = re.compile(r"\b(um|uh|er|like|you know)\b", re.IGNORECASE)
 
+SCORE_KEYS = (
+    "clarity",
+    "pacing",
+    "fillerWords",
+    "confidence",
+    "slideCoverage",
+    "answerQuality",
+    "argumentStrength",
+    "audienceFit",
+    "technicalKnowledge",
+)
+
 EVALUATOR_SYSTEM_PROMPT = """\
 You are an expert presentation coach (the AI Evaluator). Analyze a practice presentation and Q&A.
 Return ONLY valid JSON matching this schema:
 {
   "summary": string,
   "scores": {
-    "clarity": 1-10,
-    "pacing": 1-10,
-    "fillerWords": 1-10,
-    "confidence": 1-10,
-    "slideCoverage": 1-10,
-    "answerQuality": 1-10,
-    "argumentStrength": 1-10,
-    "audienceFit": 1-10,
-    "technicalKnowledge": 1-10
+    "clarity": { "value": 1-10, "rationale": string },
+    "pacing": { "value": 1-10, "rationale": string },
+    "fillerWords": { "value": 1-10, "rationale": string },
+    "confidence": { "value": 1-10, "rationale": string },
+    "slideCoverage": { "value": 1-10, "rationale": string },
+    "answerQuality": { "value": 1-10, "rationale": string },
+    "argumentStrength": { "value": 1-10, "rationale": string },
+    "audienceFit": { "value": 1-10, "rationale": string },
+    "technicalKnowledge": { "value": 1-10, "rationale": string }
   },
   "moments": [
     {
       "timestampSec": number,
       "label": string,
       "observation": string,
+      "question": string | null,
+      "answer": string | null,
       "betterApproach": string
     }
   ]
@@ -41,8 +55,11 @@ Return ONLY valid JSON matching this schema:
 
 Rules:
 - Higher scores are better. For fillerWords, 10 means few fillers.
+- Every score MUST include a short rationale citing transcript evidence (what they said or did).
 - moments must reference real transcript content with approximate timestamps from the timed transcript.
 - Include 3-6 moments covering both presentation delivery and Q&A answer quality when possible.
+- For Q&A moments: set question to the interviewer's question and answer to the presenter's reply (quote or close paraphrase from the timed transcript). For delivery-only moments (e.g. fillers, pacing), set question and answer to null.
+- betterApproach must be actionable and specific to that question/answer or delivery issue.
 - Be specific. Prefer concrete coaching over generic praise.
 - Do not wrap the JSON in markdown.
 """
@@ -54,6 +71,25 @@ class SpeechMetrics:
     filler_count: int
     talk_time_sec: float
     word_count: int
+
+
+def _score(value: int, rationale: str) -> dict[str, Any]:
+    return {"value": max(1, min(10, int(value))), "rationale": rationale}
+
+
+def _prior_assistant_question(
+    transcript: list[dict[str, Any]], answer_row: dict[str, Any]
+) -> str | None:
+    answer_ts = float(answer_row.get("timestampSec") or 0)
+    prior: str | None = None
+    for row in transcript:
+        if float(row.get("timestampSec") or 0) >= answer_ts:
+            break
+        if row.get("role") == "assistant":
+            text = str(row.get("content") or "").strip()
+            if text:
+                prior = text
+    return prior
 
 
 def _item_text(item: Any) -> str:
@@ -159,6 +195,59 @@ def compute_speech_metrics(
     )
 
 
+def _normalize_scores(raw_scores: Any) -> dict[str, Any]:
+    if not isinstance(raw_scores, dict):
+        raw_scores = {}
+    normalized: dict[str, Any] = {}
+    for key in SCORE_KEYS:
+        entry = raw_scores.get(key, 6)
+        if isinstance(entry, dict):
+            value = entry.get("value", 6)
+            rationale = (
+                str(entry.get("rationale") or "").strip() or "No rationale provided."
+            )
+            try:
+                value_int = round(float(value))
+            except (TypeError, ValueError):
+                value_int = 6
+            normalized[key] = _score(value_int, rationale)
+        else:
+            try:
+                value_int = round(float(entry))
+            except (TypeError, ValueError):
+                value_int = 6
+            normalized[key] = _score(
+                value_int, "Score recorded without a detailed rationale."
+            )
+    return normalized
+
+
+def _normalize_moments(raw_moments: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw_moments, list):
+        return []
+    moments: list[dict[str, Any]] = []
+    for item in raw_moments:
+        if not isinstance(item, dict):
+            continue
+        try:
+            ts = float(item.get("timestampSec") or 0)
+        except (TypeError, ValueError):
+            ts = 0.0
+        question = item.get("question")
+        answer = item.get("answer")
+        moments.append(
+            {
+                "timestampSec": ts,
+                "label": str(item.get("label") or "Moment"),
+                "observation": str(item.get("observation") or ""),
+                "question": str(question).strip() if question else None,
+                "answer": str(answer).strip() if answer else None,
+                "betterApproach": str(item.get("betterApproach") or ""),
+            }
+        )
+    return moments
+
+
 async def evaluate_session(
     evaluator_llm: llm.LLM,
     *,
@@ -181,6 +270,8 @@ async def evaluate_session(
         "timedTranscript": transcript,
     }
 
+    print("user_payload!", user_payload)
+
     chat_ctx = ChatContext()
     chat_ctx.add_message(role="system", content=EVALUATOR_SYSTEM_PROMPT)
     chat_ctx.add_message(
@@ -193,31 +284,26 @@ async def evaluate_session(
 
     try:
         response = await evaluator_llm.chat(chat_ctx=chat_ctx).collect()
+        print("response!", response)
         raw = (response.text or "").strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```(?:json)?\s*", "", raw)
             raw = re.sub(r"\s*```$", "", raw)
         report = json.loads(raw)
+        print("report!", report)
     except Exception:
         logger.exception("Evaluator LLM failed; using heuristic report")
-        report = _heuristic_report(persona, transcript, speech_metrics, phase_boundary_sec)
+        report = _heuristic_report(
+            persona, transcript, speech_metrics, phase_boundary_sec
+        )
 
-    report.setdefault("summary", "Feedback generated for this practice session.")
-    report.setdefault(
-        "scores",
-        {
-            "clarity": 6,
-            "pacing": 6,
-            "fillerWords": 6,
-            "confidence": 6,
-            "slideCoverage": 6,
-            "answerQuality": 6,
-            "argumentStrength": 6,
-            "audienceFit": 6,
-            "technicalKnowledge": 6,
-        },
+    if not isinstance(report, dict):
+        report = {}
+    report["summary"] = str(
+        report.get("summary") or "Feedback generated for this practice session."
     )
-    report.setdefault("moments", [])
+    report["scores"] = _normalize_scores(report.get("scores"))
+    report["moments"] = _normalize_moments(report.get("moments"))
     report["speechMetrics"] = {
         "wordsPerMinute": speech_metrics.words_per_minute,
         "fillerCount": speech_metrics.filler_count,
@@ -236,8 +322,13 @@ def _heuristic_report(
 ) -> dict[str, Any]:
     filler_score = max(1, min(10, round(10 - speech_metrics.filler_count * 0.4)))
     pacing_score = 8
+    pacing_rationale = f"Speaking rate was about {speech_metrics.words_per_minute} WPM, within a clear range."
     if speech_metrics.words_per_minute < 90 or speech_metrics.words_per_minute > 170:
         pacing_score = 5
+        pacing_rationale = (
+            f"Speaking rate was about {speech_metrics.words_per_minute} WPM, "
+            "outside the comfortable 90-170 range."
+        )
     qa_answers = [
         row
         for row in transcript
@@ -246,7 +337,12 @@ def _heuristic_report(
         and row["timestampSec"] >= phase_boundary_sec
     ]
     answer_score = 7 if len(qa_answers) >= 3 else 5 if qa_answers else 4
-    moments = []
+    answer_rationale = (
+        f"Captured {len(qa_answers)} Q&A answer(s); depth and grounding vary."
+        if qa_answers
+        else "Little or no Q&A answer content was captured."
+    )
+    moments: list[dict[str, Any]] = []
     if speech_metrics.filler_count > 3 and transcript:
         moments.append(
             {
@@ -255,18 +351,29 @@ def _heuristic_report(
                 "observation": (
                     f"Detected about {speech_metrics.filler_count} filler words during the talk."
                 ),
+                "question": None,
+                "answer": None,
                 "betterApproach": "Replace fillers with a short pause before the next point.",
             }
         )
     if qa_answers:
-        short = next((row for row in qa_answers if len(row["content"].split()) < 20), None)
+        short = next(
+            (row for row in qa_answers if len(row["content"].split()) < 20), None
+        )
         if short:
             moments.append(
                 {
                     "timestampSec": short["timestampSec"],
                     "label": "Weak answer",
-                    "observation": "This answer was short and did not connect back to a deck claim.",
-                    "betterApproach": "Tie the answer to a specific requirement or slide, then explain why it matters.",
+                    "observation": (
+                        "This answer was short and did not connect back to a deck claim."
+                    ),
+                    "question": _prior_assistant_question(transcript, short),
+                    "answer": short["content"],
+                    "betterApproach": (
+                        "Tie the answer to a specific requirement or slide, "
+                        "then explain why it matters."
+                    ),
                 }
             )
     if not moments and transcript:
@@ -275,6 +382,8 @@ def _heuristic_report(
                 "timestampSec": transcript[0]["timestampSec"],
                 "label": "Delivery baseline",
                 "observation": "Enough material was captured to coach pacing and answer structure.",
+                "question": None,
+                "answer": None,
                 "betterApproach": "State one crisp takeaway before inviting questions.",
             }
         )
@@ -284,15 +393,32 @@ def _heuristic_report(
             "Use this as directional coaching while LLM evaluation is unavailable."
         ),
         "scores": {
-            "clarity": 6,
-            "pacing": pacing_score,
-            "fillerWords": filler_score,
-            "confidence": 6,
-            "slideCoverage": 6,
-            "answerQuality": answer_score,
-            "argumentStrength": max(1, answer_score - 1),
-            "audienceFit": 6,
-            "technicalKnowledge": 6,
+            "clarity": _score(
+                6, "Baseline clarity score from heuristic delivery signals."
+            ),
+            "pacing": _score(pacing_score, pacing_rationale),
+            "fillerWords": _score(
+                filler_score,
+                f"Counted about {speech_metrics.filler_count} filler words in the talk.",
+            ),
+            "confidence": _score(
+                6, "Heuristic confidence estimate from delivery patterns."
+            ),
+            "slideCoverage": _score(
+                6, "Slide coverage estimated without full LLM review."
+            ),
+            "answerQuality": _score(answer_score, answer_rationale),
+            "argumentStrength": _score(
+                max(1, answer_score - 1),
+                "Argument strength tracked with answer depth in this heuristic pass.",
+            ),
+            "audienceFit": _score(
+                6,
+                f"Audience fit scored neutrally for persona {persona.replace('_', ' ')}.",
+            ),
+            "technicalKnowledge": _score(
+                6, "Technical depth not fully assessed in the heuristic fallback."
+            ),
         },
         "moments": moments,
     }

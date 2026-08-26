@@ -1,7 +1,12 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { type FeedbackReport, formatTimestamp } from '@/lib/podium';
+import {
+  type FeedbackReport,
+  formatTimestamp,
+  scoreRationale,
+  scoreValue,
+} from '@/lib/podium';
 
 const SCORE_LABELS: { key: keyof FeedbackReport['scores']; label: string }[] = [
   { key: 'clarity', label: 'Clarity' },
@@ -25,7 +30,7 @@ export function FeedbackView({
   onPracticeAgain,
   ref,
 }: React.ComponentProps<'div'> & FeedbackViewProps) {
-  const scoreValues = Object.values(report.scores);
+  const scoreValues = SCORE_LABELS.map(({ key }) => scoreValue(report.scores[key]));
   const average =
     scoreValues.length > 0
       ? Math.round((scoreValues.reduce((sum, value) => sum + value, 0) / scoreValues.length) * 10) /
@@ -65,15 +70,22 @@ export function FeedbackView({
       <section className="mt-10">
         <h2 className="text-foreground text-sm font-semibold tracking-wide uppercase">Scores</h2>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {SCORE_LABELS.map(({ key, label }) => (
-            <div
-              key={key}
-              className="border-border flex items-center justify-between rounded-lg border px-4 py-3"
-            >
-              <span className="text-sm">{label}</span>
-              <span className="font-mono text-sm font-semibold">{report.scores[key]}/10</span>
-            </div>
-          ))}
+          {SCORE_LABELS.map(({ key, label }) => {
+            const rationale = scoreRationale(report.scores[key]);
+            return (
+              <div key={key} className="border-border rounded-lg border px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm">{label}</span>
+                  <span className="font-mono text-sm font-semibold">
+                    {scoreValue(report.scores[key])}/10
+                  </span>
+                </div>
+                {rationale && (
+                  <p className="text-muted-foreground mt-2 text-xs leading-5">{rationale}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -85,24 +97,47 @@ export function FeedbackView({
           {report.moments.length === 0 ? (
             <p className="text-muted-foreground text-sm">No specific moments flagged.</p>
           ) : (
-            report.moments.map((moment, index) => (
-              <article
-                key={`${moment.timestampSec}-${index}`}
-                className="border-border rounded-lg border px-4 py-4"
-              >
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="font-mono text-sm font-semibold">
-                    {formatTimestamp(moment.timestampSec)}
-                  </span>
-                  <span className="text-foreground text-sm font-medium">{moment.label}</span>
-                </div>
-                <p className="text-muted-foreground mt-2 text-sm leading-6">{moment.observation}</p>
-                <p className="text-foreground mt-2 text-sm leading-6">
-                  <span className="font-medium">Better approach: </span>
-                  {moment.betterApproach}
-                </p>
-              </article>
-            ))
+            report.moments.map((moment, index) => {
+              const hasQa = Boolean(moment.question || moment.answer);
+              return (
+                <article
+                  key={`${moment.timestampSec}-${index}`}
+                  className="border-border rounded-lg border px-4 py-4"
+                >
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="font-mono text-sm font-semibold">
+                      {formatTimestamp(moment.timestampSec)}
+                    </span>
+                    <span className="text-foreground text-sm font-medium">{moment.label}</span>
+                  </div>
+                  {moment.observation && (
+                    <p className="text-muted-foreground mt-2 text-sm leading-6">
+                      {moment.observation}
+                    </p>
+                  )}
+                  {hasQa && (
+                    <div className="mt-3 space-y-2">
+                      {moment.question && (
+                        <p className="text-sm leading-6">
+                          <span className="text-foreground font-medium">Question: </span>
+                          <span className="text-muted-foreground">{moment.question}</span>
+                        </p>
+                      )}
+                      {moment.answer && (
+                        <p className="text-sm leading-6">
+                          <span className="text-foreground font-medium">Your answer: </span>
+                          <span className="text-muted-foreground">{moment.answer}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-foreground mt-3 text-sm leading-6">
+                    <span className="font-medium">Better approach: </span>
+                    {moment.betterApproach}
+                  </p>
+                </article>
+              );
+            })
           )}
         </div>
       </section>

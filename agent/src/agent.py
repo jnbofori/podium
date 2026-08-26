@@ -90,7 +90,9 @@ def _deck_context_message(state: SessionState) -> str:
 
 
 class SilentListener(Agent):
-    def __init__(self, state: SessionState, chat_ctx: ChatContext | None = None) -> None:
+    def __init__(
+        self, state: SessionState, chat_ctx: ChatContext | None = None
+    ) -> None:
         super().__init__(
             chat_ctx=chat_ctx,
             instructions=textwrap.dedent(
@@ -112,6 +114,13 @@ class SilentListener(Agent):
         self, turn_ctx: ChatContext, new_message: ChatMessage
     ) -> None:
         text = (new_message.text_content or "").strip()
+        # ChangeFix: StopResponse would discard this turn from history; persist it so evaluation
+        # and the Q&A handoff still see the presentation transcript.
+        if text:
+            updated = self.chat_ctx.copy()
+            updated.insert(new_message)
+            await self.update_chat_ctx(updated)
+
         controller: PodiumController = self.session.userdata
         if text and _ready_for_questions(text):
             await controller.transition_to_qa(reason="voice_cue")
@@ -119,11 +128,14 @@ class SilentListener(Agent):
 
 
 class AudienceInterviewer(Agent):
-    def __init__(self, state: SessionState, chat_ctx: ChatContext | None = None) -> None:
+    def __init__(
+        self, state: SessionState, chat_ctx: ChatContext | None = None
+    ) -> None:
         persona_prompt = get_persona_prompt(state.persona)
         super().__init__(
             chat_ctx=chat_ctx,
             instructions=textwrap.dedent(
+                # todo: change prompt to be something like "person on a presentation panel"
                 f"""\
                 You are the AI Interviewer for a presentation practice app.
                 {persona_prompt}
@@ -131,7 +143,7 @@ class AudienceInterviewer(Agent):
                 Ground every question in the uploaded deck and what the presenter actually said.
                 Do not use a fixed question bank. Ask one question at a time.
                 After an answer, briefly acknowledge, then ask the next question.
-                Aim for about 5 to 8 questions total, then invite the presenter to wrap up.
+                Aim for about 1 question total, then invite the presenter to wrap up.
                 Stay in character for the chosen audience.
 
                 {VOICE_OUTPUT_RULES}
@@ -154,7 +166,9 @@ class AudienceInterviewer(Agent):
 
 
 class PodiumController:
-    def __init__(self, ctx: JobContext, session: AgentSession, state: SessionState) -> None:
+    def __init__(
+        self, ctx: JobContext, session: AgentSession, state: SessionState
+    ) -> None:
         self.ctx = ctx
         self.session = session
         self.state = state
@@ -174,7 +188,9 @@ class PodiumController:
             return
         self._qa_started = True
         self.state.phase = "qa"
-        self.state.phase_boundary_sec = max(0.0, time.time() - self.state.session_started_at)
+        self.state.phase_boundary_sec = max(
+            0.0, time.time() - self.state.session_started_at
+        )
         logger.info(
             "Transitioning to Q&A (%s) at %.1fs", reason, self.state.phase_boundary_sec
         )
@@ -193,8 +209,12 @@ class PodiumController:
         logger.info("Running evaluator and publishing feedback report")
 
         try:
+            agent = self.session.current_agent
+            history_source = (
+                agent.chat_ctx if agent is not None else self.session.history
+            )
             transcript = build_timed_transcript(
-                self.session.history,
+                history_source,
                 session_started_at=self.state.session_started_at,
             )
             metrics = compute_speech_metrics(
