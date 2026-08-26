@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import type { AppConfig } from '@/app-config';
 import { AgentSessionView_01 } from '@/components/agents-ui/blocks/agent-session-view-01';
+import { SlideViewer } from '@/components/app/slide-viewer';
 import { Button } from '@/components/ui/button';
 import { usePodiumControls } from '@/hooks/use-podium-room';
 import type { AudiencePersonaId, SessionPhase } from '@/lib/podium';
@@ -13,6 +14,7 @@ interface PracticeSessionViewProps {
   appConfig: AppConfig;
   phase: Extract<SessionPhase, 'present' | 'qa'>;
   persona: AudiencePersonaId;
+  deckId: string | null;
   onPhaseChange: (phase: Extract<SessionPhase, 'present' | 'qa'>) => void;
   onRequestFeedback: () => void;
 }
@@ -21,6 +23,7 @@ export function PracticeSessionView({
   appConfig,
   phase,
   persona,
+  deckId,
   onPhaseChange,
   onRequestFeedback,
   ...motionProps
@@ -57,17 +60,17 @@ export function PracticeSessionView({
 
   return (
     <div className="relative h-full min-h-svh w-full">
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex justify-center p-4 md:p-6">
-        <div className="bg-background/90 border-hair pointer-events-auto w-full max-w-xl border px-5 py-4 backdrop-blur">
-          <p className="kicker text-center">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex justify-start p-4 md:px-8 md:pt-5">
+        <div className="bg-background/90 border-hair pointer-events-auto w-full max-w-md border px-4 py-3 backdrop-blur md:max-w-lg">
+          <p className="kicker">
             {phase === 'present' ? 'Presenting' : 'Q&A'} · {personaLabel}
           </p>
-          <p className="text-muted-foreground mt-2 text-center text-xs leading-5">
+          <p className="text-muted-foreground mt-1.5 text-xs leading-5">
             {phase === 'present'
-              ? 'Wait for the audience welcome, then present your deck. Start Q&A when you are ready.'
+              ? 'Start Q&A when you are ready.'
               : 'Answer one question at a time. When finished, request your feedback report.'}
           </p>
-          <div className="mt-4 flex justify-center">
+          <div className="mt-3 flex justify-start">
             {phase === 'present' ? (
               <Button
                 size="sm"
@@ -109,9 +112,17 @@ export function PracticeSessionView({
         audioVisualizerRadialBarCount={appConfig.audioVisualizerRadialBarCount}
         audioVisualizerRadialRadius={appConfig.audioVisualizerRadialRadius}
         audioVisualizerWaveLineWidth={appConfig.audioVisualizerWaveLineWidth}
+        presentationLayout
+        mainContent={
+          deckId ? (
+            <SlideViewer deckId={deckId} className="h-full min-h-0" />
+          ) : (
+            <p className="text-muted-foreground text-sm">No deck selected.</p>
+          )
+        }
         preConnectMessage={
           phase === 'present'
-            ? 'Your audience will welcome you — will begin shortly'
+            ? 'Your audience will welcome you — begin when you are ready'
             : 'Answer the audience questions'
         }
         className="absolute inset-0"

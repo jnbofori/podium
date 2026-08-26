@@ -8,9 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db import get_db
-from app.models import Deck, PracticeSession, User
+from app.models import Deck, DeckSlide, PracticeSession, User
 from app.schemas import (
     DeckOut,
+    DeckSlideOut,
     LiveKitTokenRequest,
     LiveKitTokenResponse,
     SessionCreate,
@@ -21,7 +22,14 @@ from app.security import get_current_user
 from app.services.evaluate import average_score
 from app.services.livekit_tokens import mint_livekit_token
 from app.services.pptx import parse_pptx
-from app.services.storage import delete_deck_file, upload_deck_file
+from app.services.slide_render import SlideRenderError, render_pptx_to_pngs
+from app.services.storage import (
+    create_signed_url,
+    delete_storage_paths,
+    download_deck_file,
+    slide_storage_path,
+    upload_deck_file,
+)
 
 router = APIRouter(tags=["business"])
 
@@ -33,6 +41,29 @@ PERSONAS = {
     "skeptical_stakeholder",
     "interview_panel",
 }
+
+
+def _persist_slide_pngs(
+    *,
+    user_id: uuid.UUID,
+    deck_id: uuid.UUID,
+    pngs: list[bytes],
+) -> list[DeckSlide]:
+    slides: list[DeckSlide] = []
+    for index, png in enumerate(pngs, start=1):
+        path = slide_storage_path(str(user_id), str(deck_id), index)
+        upload_deck_file(path, png, content_type="image/png")
+        slides.append(
+            DeckSlide(deck_id=deck_id, slide_index=index, storage_path=path)
+        )
+    return slides
+
+
+def _slide_outs(slides: list[DeckSlide]) -> list[DeckSlideOut]:
+    return [
+        DeckSlideOut(index=slide.slide_index, url=create_signed_url(slide.storage_path))
+        for slide in sorted(slides, key=lambda s: s.slide_index)
+    ]
 
 
 def _session_out(session: PracticeSession) -> SessionOut:
@@ -67,11 +98,25 @@ async def create_deck(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
 
+    try:
+        pngs = render_pptx_to_pngs(data, file_name)
+    except SlideRenderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+
     deck_id = uuid.uuid4()
     storage_path = f"{user.id}/{deck_id}.pptx"
+    slide_paths: list[str] = []
     try:
         upload_deck_file(storage_path, data)
+        slide_rows = _persist_slide_pngs(
+            user_id=user.id, deck_id=deck_id, pngs=pngs
+        )
+        slide_paths = [row.storage_path for row in slide_rows]
     except Exception as exc:
+        delete_storage_paths([storage_path, *slide_paths])
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Failed to upload deck to storage: {exc}",
@@ -84,6 +129,7 @@ async def create_deck(
         storage_path=storage_path,
         plain_text=parsed["plainText"],
         slide_count=parsed["slideCount"],
+        slides=slide_rows,
     )
     db.add(deck)
     await db.commit()
@@ -117,6 +163,52 @@ async def get_deck(
     return DeckOut.model_validate(deck)
 
 
+@router.get("/decks/{deck_id}/slides", response_model=list[DeckSlideOut])
+async def get_deck_slides(
+    deck_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Deck)
+        .options(selectinload(Deck.slides))
+        .where(Deck.id == deck_id, Deck.user_id == user.id)
+    )
+    deck = result.scalar_one_or_none()
+    if deck is None:
+        raise HTTPException(status_code=404, detail="Deck not found")
+
+    if deck.slides:
+        return _slide_outs(list(deck.slides))
+
+    # Lazy render for decks uploaded before slide images existed
+    try:
+        pptx_bytes = download_deck_file(deck.storage_path)
+        pngs = render_pptx_to_pngs(pptx_bytes, deck.file_name)
+        slide_rows = _persist_slide_pngs(
+            user_id=user.id, deck_id=deck.id, pngs=pngs
+        )
+    except SlideRenderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to render slides: {exc}",
+        ) from exc
+
+    for row in slide_rows:
+        db.add(row)
+    await db.commit()
+    result = await db.execute(
+        select(DeckSlide)
+        .where(DeckSlide.deck_id == deck.id)
+        .order_by(DeckSlide.slide_index)
+    )
+    return _slide_outs(list(result.scalars().all()))
+
+
 @router.delete("/decks/{deck_id}")
 async def delete_deck(
     deck_id: uuid.UUID,
@@ -124,12 +216,15 @@ async def delete_deck(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Deck).where(Deck.id == deck_id, Deck.user_id == user.id)
+        select(Deck)
+        .options(selectinload(Deck.slides))
+        .where(Deck.id == deck_id, Deck.user_id == user.id)
     )
     deck = result.scalar_one_or_none()
     if deck is None:
         raise HTTPException(status_code=404, detail="Deck not found")
-    delete_deck_file(deck.storage_path)
+    slide_paths = [s.storage_path for s in deck.slides]
+    delete_storage_paths([deck.storage_path, *slide_paths])
     await db.delete(deck)
     await db.commit()
     return {"ok": True}

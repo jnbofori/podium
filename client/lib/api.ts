@@ -18,6 +18,11 @@ export type ApiDeck = {
   updated_at: string;
 };
 
+export type ApiDeckSlide = {
+  index: number;
+  url: string;
+};
+
 export type ApiSession = {
   id: string;
   deck_id: string;
@@ -153,6 +158,10 @@ export async function uploadDeck(file: File) {
 
 export async function deleteDeck(id: string) {
   return apiFetch<{ ok: boolean }>(`/decks/${id}`, { method: 'DELETE' });
+}
+
+export async function getDeckSlides(deckId: string) {
+  return apiFetch<ApiDeckSlide[]>(`/decks/${deckId}/slides`);
 }
 
 export async function createSession(args: { deck_id: string; persona: string }) {

@@ -62,6 +62,29 @@ class Deck(Base):
 
     user: Mapped[User] = relationship(back_populates="decks")
     sessions: Mapped[list[PracticeSession]] = relationship(back_populates="deck")
+    slides: Mapped[list[DeckSlide]] = relationship(
+        back_populates="deck",
+        cascade="all, delete-orphan",
+        order_by="DeckSlide.slide_index",
+    )
+
+
+class DeckSlide(Base):
+    __tablename__ = "deck_slides"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    deck_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("decks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    slide_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    storage_path: Mapped[str] = mapped_column(Text, nullable=False)
+
+    deck: Mapped[Deck] = relationship(back_populates="slides")
 
 
 class PracticeSession(Base):

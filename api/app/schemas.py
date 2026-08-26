@@ -45,6 +45,11 @@ class DeckOut(BaseModel):
     updated_at: datetime
 
 
+class DeckSlideOut(BaseModel):
+    index: int
+    url: str
+
+
 class SessionCreate(BaseModel):
     deck_id: uuid.UUID
     persona: str

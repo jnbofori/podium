@@ -50,6 +50,7 @@ export function ViewController({
   const session = useSessionContext();
   const [phase, setPhase] = useState<SessionPhase>('setup');
   const [persona, setPersona] = useState<AudiencePersonaId>('executive');
+  const [deckId, setDeckId] = useState<string | null>(initialDeckId ?? null);
   const [report, setReport] = useState<FeedbackReport | null>(null);
   const [awaitingFeedback, setAwaitingFeedback] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
@@ -152,6 +153,7 @@ export function ViewController({
     deck: PracticeDeckSelection;
   }) {
     setPersona(args.persona);
+    setDeckId(args.deck.id);
     setReport(null);
     setFeedbackError(null);
     const sessionId = await onPrepareSession(args);
@@ -188,6 +190,7 @@ export function ViewController({
           appConfig={appConfig}
           phase={phase}
           persona={persona}
+          deckId={deckId}
           onPhaseChange={(next) => {
             if (
               next === 'qa' &&

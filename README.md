@@ -14,17 +14,17 @@ podium/
 
 - Node.js 24.x and [pnpm](https://pnpm.io)
 - Python 3.11+ and [uv](https://docs.astral.sh/uv/)
+- [LibreOffice](https://www.libreoffice.org/) on the machine running the API (slide PNG rendering via `soffice`)
 - A [LiveKit Cloud](https://cloud.livekit.io) project
 - A [Supabase](https://supabase.com) project (Postgres + Storage only)
 
 ## Supabase setup
 
 1. Create a project and copy the **database connection string** (URI) and **service role** key.
-2. Run the SQL in [`supabase/migrations/20260824120000_init.sql`](supabase/migrations/20260824120000_init.sql) (SQL editor or `supabase db push`).
+2. Run all SQL in [`supabase/migrations/`](supabase/migrations/) in order (SQL editor or `supabase db push`).
 3. Storage → New bucket → name: `decks` → **Private** (not public).
 
 FastAPI talks to Postgres and Storage with the service role. The browser never uses Supabase Auth or Storage directly.
-
 ## Setup
 
 ```bash

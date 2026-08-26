@@ -154,6 +154,13 @@ export interface AgentSessionView_01Props {
   audioVisualizerRadialRadius?: number;
   /** Stroke width of the wave path when `audioVisualizerType` is `wave`. */
   audioVisualizerWaveLineWidth?: number;
+  /**
+   * Dual-pane practice layout: `mainContent` fills the primary area and the
+   * agent visualizer sits in a side floating square.
+   */
+  presentationLayout?: boolean;
+  /** Content shown in the main column when `presentationLayout` is true. */
+  mainContent?: React.ReactNode;
   /** Optional class name merged onto the outer `<section>` container. */
   className?: string;
 }
@@ -173,6 +180,8 @@ export function AgentSessionView_01({
   audioVisualizerRadialBarCount,
   audioVisualizerRadialRadius,
   audioVisualizerWaveLineWidth,
+  presentationLayout = false,
+  mainContent,
   themeMode,
   ref,
   className,
@@ -207,7 +216,7 @@ export function AgentSessionView_01({
       className={cn('bg-background relative z-10 h-full w-full overflow-hidden', className)}
       {...props}
     >
-      <Fade top className="absolute inset-x-4 top-0 z-10 h-40" />
+      <Fade top className={cn('absolute inset-x-4 top-0 z-10 h-40', presentationLayout && 'h-24')} />
       {/* transcript */}
       <AnimatePresence>
         {isChatOpen && (
@@ -228,6 +237,8 @@ export function AgentSessionView_01({
       <TileLayout
         isChatOpen={isChatOpen}
         themeMode={themeMode}
+        presentationLayout={presentationLayout}
+        mainContent={mainContent}
         audioVisualizerType={audioVisualizerType}
         audioVisualizerColor={audioVisualizerColor}
         audioVisualizerColorShift={audioVisualizerColorShift}
@@ -241,7 +252,10 @@ export function AgentSessionView_01({
       {/* Bottom */}
       <motion.div
         {...BOTTOM_VIEW_MOTION_PROPS}
-        className="absolute inset-x-3 bottom-0 z-50 md:inset-x-12"
+        className={cn(
+          'absolute inset-x-3 bottom-0 z-50 md:inset-x-12',
+          presentationLayout && 'md:inset-x-8'
+        )}
       >
         {/* Pre-connect message */}
         {isPreConnectBufferEnabled && (
@@ -251,14 +265,22 @@ export function AgentSessionView_01({
                 key="pre-connect-message"
                 aria-hidden={messages.length > 0}
                 {...SHIMMER_MOTION_PROPS}
-                className="shimmer shimmer-duration-2000 pointer-events-none mx-auto block w-full max-w-2xl pb-4 text-center text-sm font-semibold"
+                className={cn(
+                  'shimmer shimmer-duration-2000 pointer-events-none mx-auto block w-full pb-4 text-center text-sm font-semibold',
+                  presentationLayout ? 'max-w-6xl' : 'max-w-2xl'
+                )}
               >
                 {preConnectMessage}
               </motion.p>
             )}
           </AnimatePresence>
         )}
-        <div className="bg-background relative mx-auto max-w-2xl pb-3 md:pb-12">
+        <div
+          className={cn(
+            'bg-background relative mx-auto pb-3 md:pb-12',
+            presentationLayout ? 'max-w-6xl' : 'max-w-2xl'
+          )}
+        >
           <AgentControlBar
             variant="livekit"
             controls={controls}

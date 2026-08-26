@@ -57,6 +57,10 @@ const tileViewClassNames = {
   secondTileChatClosed: ['col-start-2 row-start-3', 'place-content-end'],
 };
 
+/** Dark-theme floating square (neumorphic dual shadow, modest radius). */
+const FLOATING_SQUARE =
+  'rounded-xl border border-primary/45 bg-[oklch(0.18_0.015_260)] shadow-[8px_8px_18px_oklch(0.08_0.02_260/70%),-6px_-6px_14px_oklch(0.28_0.02_260/45%)]';
+
 export function useLocalTrackRef(source: Track.Source) {
   const { localParticipant } = useLocalParticipant();
   const publication = localParticipant.getTrackPublication(source);
@@ -70,6 +74,9 @@ export function useLocalTrackRef(source: Track.Source) {
 interface TileLayoutProps {
   themeMode?: 'dark' | 'light';
   isChatOpen: boolean;
+  /** Dual-pane practice layout: main content left, floating visualizer right. */
+  presentationLayout?: boolean;
+  mainContent?: React.ReactNode;
   audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
   audioVisualizerColor?: `#${string}`;
   audioVisualizerColorShift?: number;
@@ -84,6 +91,8 @@ interface TileLayoutProps {
 export function TileLayout({
   themeMode,
   isChatOpen,
+  presentationLayout = false,
+  mainContent,
   audioVisualizerType,
   audioVisualizerColor,
   audioVisualizerColorShift,
@@ -106,6 +115,64 @@ export function TileLayout({
   const isAvatar = agentVideoTrack !== undefined;
   const videoWidth = agentVideoTrack?.publication.dimensions?.width ?? 0;
   const videoHeight = agentVideoTrack?.publication.dimensions?.height ?? 0;
+
+  if (presentationLayout) {
+    return (
+      <div className="pointer-events-none absolute inset-x-0 top-36 bottom-28 z-40 px-4 md:top-40 md:bottom-32 md:px-8">
+        <div className="mx-auto flex h-full max-w-6xl gap-5 md:gap-6">
+          <div className="pointer-events-auto flex min-h-0 min-w-0 flex-[3] flex-col">
+            {mainContent}
+          </div>
+
+          <aside className="pointer-events-none flex w-[min(28%,220px)] shrink-0 flex-col items-center gap-4 pt-1 md:w-[240px]">
+            <div
+              className={cn(
+                FLOATING_SQUARE,
+                'pointer-events-none relative flex aspect-square w-full max-w-[220px] items-center justify-center overflow-hidden'
+              )}
+            >
+              {!isAvatar ? (
+                <AudioVisualizer
+                  key="audio-visualizer"
+                  audioVisualizerType={audioVisualizerType}
+                  audioVisualizerColor={audioVisualizerColor}
+                  audioVisualizerColorShift={audioVisualizerColorShift}
+                  audioVisualizerBarCount={audioVisualizerBarCount}
+                  audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
+                  audioVisualizerRadialRadius={audioVisualizerRadialRadius}
+                  audioVisualizerGridRowCount={audioVisualizerGridRowCount}
+                  audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
+                  audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
+                  themeMode={themeMode}
+                  isChatOpen={false}
+                  className="size-[160px] md:size-[180px]"
+                  style={{ color: audioVisualizerColor }}
+                />
+              ) : (
+                <VideoTrack
+                  width={videoWidth}
+                  height={videoHeight}
+                  trackRef={agentVideoTrack}
+                  className="size-full object-cover"
+                />
+              )}
+            </div>
+
+            {hasSecondTile && (
+              <div className={cn(FLOATING_SQUARE, 'overflow-hidden')}>
+                <VideoTrack
+                  trackRef={cameraTrack || screenShareTrack}
+                  width={(cameraTrack || screenShareTrack)?.publication.dimensions?.width ?? 0}
+                  height={(cameraTrack || screenShareTrack)?.publication.dimensions?.height ?? 0}
+                  className="aspect-square size-[96px] object-cover"
+                />
+              </div>
+            )}
+          </aside>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-8 bottom-32 z-50 md:top-12 md:bottom-40">
