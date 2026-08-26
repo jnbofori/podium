@@ -64,7 +64,7 @@ export function PracticeSessionView({
           </p>
           <p className="text-muted-foreground mt-2 text-center text-xs leading-5">
             {phase === 'present'
-              ? 'Your audience is listening silently. Present your deck, then start Q&A when ready.'
+              ? 'Wait for the audience welcome, then present your deck. Start Q&A when you are ready.'
               : 'Answer one question at a time. When finished, request your feedback report.'}
           </p>
           <div className="mt-4 flex justify-center">
@@ -111,7 +111,7 @@ export function PracticeSessionView({
         audioVisualizerWaveLineWidth={appConfig.audioVisualizerWaveLineWidth}
         preConnectMessage={
           phase === 'present'
-            ? 'Audience is listening — start your presentation'
+            ? 'Your audience will welcome you — begin when you are ready'
             : 'Answer the audience questions'
         }
         className="fixed inset-0"

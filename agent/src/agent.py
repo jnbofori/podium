@@ -93,13 +93,21 @@ class SilentListener(Agent):
     def __init__(
         self, state: SessionState, chat_ctx: ChatContext | None = None
     ) -> None:
+        persona_prompt = get_persona_prompt(state.persona)
         super().__init__(
             chat_ctx=chat_ctx,
             instructions=textwrap.dedent(
                 f"""\
-                You are a silent audience member listening to a live presentation.
-                Do not speak, greet, or ask questions until the presentation phase ends.
-                Continue listening and remember what the presenter says.
+                You are an audience member for a presentation practice session.
+                {persona_prompt}
+
+                At the start of the session you give a brief welcome and introduction,
+                then invite the presenter to begin when ready.
+                After that opening, stay completely silent while they present:
+                do not greet again, interrupt, comment, or ask questions until Q&A begins.
+                Listen carefully and remember what the presenter says.
+
+                {VOICE_OUTPUT_RULES}
 
                 {_deck_context_message(state)}
                 """
@@ -109,12 +117,21 @@ class SilentListener(Agent):
 
     async def on_enter(self) -> None:
         logger.info("SilentListener active — presentation phase")
+        label = get_persona_label(self._state.persona)
+        await self.session.generate_reply(
+            instructions=(
+                f"Welcome the presenter briefly as {label}. "
+                "Introduce yourself in character in one short sentence. "
+                "Then tell them to go ahead and begin whenever they are ready. "
+                "Do not ask presentation questions yet. Keep it to two or three sentences."
+            )
+        )
 
     async def on_user_turn_completed(
         self, turn_ctx: ChatContext, new_message: ChatMessage
     ) -> None:
         text = (new_message.text_content or "").strip()
-        # ChangeFix: StopResponse would discard this turn from history; persist it so evaluation
+        # StopResponse would discard this turn from history; persist it so evaluation
         # and the Q&A handoff still see the presentation transcript.
         if text:
             updated = self.chat_ctx.copy()
