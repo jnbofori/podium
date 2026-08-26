@@ -1,14 +1,21 @@
-import { Public_Sans } from 'next/font/google';
+import { Instrument_Sans, Syne } from 'next/font/google';
 import localFont from 'next/font/local';
+import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { ClientShell } from '@/components/app/client-shell';
 import { cn } from '@/lib/shadcn/utils';
 import { getAppConfig, getStyles } from '@/lib/utils';
 import '@/styles/globals.css';
 
-const publicSans = Public_Sans({
-  variable: '--font-public-sans',
+const instrumentSans = Instrument_Sans({
+  variable: '--font-instrument-sans',
   subsets: ['latin'],
+});
+
+const syne = Syne({
+  variable: '--font-syne',
+  subsets: ['latin'],
+  weight: ['600', '700', '800'],
 });
 
 const commitMono = localFont({
@@ -42,6 +49,13 @@ interface RootLayoutProps {
   children: React.ReactNode;
 }
 
+export const metadata: Metadata = {
+  icons: {
+    icon: [{ url: '/favicon.png', type: 'image/png' }],
+    apple: [{ url: '/favicon.png', type: 'image/png' }],
+  },
+};
+
 export default async function RootLayout({ children }: RootLayoutProps) {
   const hdrs = await headers();
   const appConfig = await getAppConfig(hdrs);
@@ -53,7 +67,8 @@ export default async function RootLayout({ children }: RootLayoutProps) {
       lang="en"
       suppressHydrationWarning
       className={cn(
-        publicSans.variable,
+        instrumentSans.variable,
+        syne.variable,
         commitMono.variable,
         'scroll-smooth font-sans antialiased'
       )}
@@ -62,6 +77,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         {styles && <style>{styles}</style>}
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="theme-color" content="#1a1e28" />
       </head>
       <body className="overflow-x-hidden">
         <ClientShell companyName={companyName} logo={logo} logoDark={logoDark}>

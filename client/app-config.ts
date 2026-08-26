@@ -43,10 +43,10 @@ export const APP_CONFIG_DEFAULTS: AppConfig = {
   supportsScreenShare: true,
   isPreConnectBufferEnabled: true,
 
-  logo: '/lk-logo.svg',
-  accent: '#0f4c5c',
-  logoDark: '/lk-logo-dark.svg',
-  accentDark: '#5eead4',
+  logo: '/podium-logo.png',
+  accent: '#c9a227',
+  logoDark: '/podium-logo.png',
+  accentDark: '#e8c547',
   startButtonText: 'Start practice',
 
   // optional: audio visualization configuration

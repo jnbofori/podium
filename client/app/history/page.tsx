@@ -32,21 +32,26 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pt-24 pb-16">
-      <h1 className="text-3xl font-semibold tracking-tight">History</h1>
+    <div className="mx-auto w-full max-w-3xl px-5 py-12 md:px-10 md:py-16">
+      <p className="kicker">Archive</p>
+      <h1 className="font-display text-foreground mt-3 text-4xl font-extrabold tracking-tight uppercase">
+        History
+      </h1>
       <p className="text-muted-foreground mt-2 text-sm">Past practice sessions and scores.</p>
       {error && <p className="text-destructive mt-4 text-sm">{error}</p>}
-      <ul className="mt-8 space-y-2">
+      <ul className="border-hair mt-10 border-t">
         {sessions.length === 0 ? (
-          <li className="text-muted-foreground text-sm">No sessions yet.</li>
+          <li className="text-muted-foreground border-hair border-b py-4 text-sm">
+            No sessions yet.
+          </li>
         ) : (
           sessions.map((session) => (
-            <li key={session.id} className="border-border rounded-lg border px-4 py-3">
-              <Link href={`/history/${session.id}`} className="block">
+            <li key={session.id} className="border-hair border-b py-4">
+              <Link href={`/history/${session.id}`} className="block hover:opacity-80">
                 <p className="text-sm font-medium">
                   {session.deck_file_name ?? 'Deck'} · {session.persona.replaceAll('_', ' ')}
                 </p>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-faint mt-0.5 font-mono text-[10px] tracking-wide uppercase">
                   {new Date(session.started_at).toLocaleString()} · {session.status}
                   {session.overall_score != null ? ` · ${session.overall_score}/10` : ''}
                 </p>

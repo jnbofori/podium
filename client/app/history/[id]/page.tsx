@@ -37,7 +37,7 @@ export default function HistoryDetailPage() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-lg px-4 pt-24">
+      <div className="mx-auto max-w-lg px-5 py-16 md:px-10">
         <p className="text-destructive text-sm">{error}</p>
         <Button className="mt-4" variant="outline" asChild>
           <Link href="/history">Back</Link>
@@ -48,7 +48,7 @@ export default function HistoryDetailPage() {
 
   if (!session) {
     return (
-      <div className="text-muted-foreground flex min-h-svh items-center justify-center text-sm">
+      <div className="text-muted-foreground flex min-h-svh items-center justify-center font-mono text-xs tracking-wide uppercase">
         Loading session…
       </div>
     );
@@ -56,7 +56,7 @@ export default function HistoryDetailPage() {
 
   if (!session.feedback) {
     return (
-      <div className="mx-auto max-w-lg px-4 pt-24">
+      <div className="mx-auto max-w-lg px-5 py-16 md:px-10">
         <p className="text-muted-foreground text-sm">
           This session has no feedback report yet ({session.status}).
         </p>
@@ -68,7 +68,7 @@ export default function HistoryDetailPage() {
   }
 
   return (
-    <div className="pt-12">
+    <div>
       <FeedbackView
         report={session.feedback as unknown as FeedbackReport}
         onPracticeAgain={() => router.push(`/practice?deck=${session.deck_id}`)}

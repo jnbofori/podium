@@ -217,7 +217,7 @@ export function ViewController({
       {feedbackError && (
         <motion.div
           key="feedback-error"
-          className="mx-auto flex max-w-md flex-col items-center px-4 py-20 text-center"
+          className="mx-auto flex max-w-md flex-col items-center px-5 py-20 text-center"
           {...VIEW_MOTION_PROPS}
         >
           <p className="text-destructive text-sm font-medium" role="alert">
@@ -237,7 +237,7 @@ export function ViewController({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <p className="text-foreground font-mono text-sm tracking-wide">
+          <p className="text-foreground font-mono text-xs tracking-[0.2em] uppercase">
             Evaluating your presentation…
           </p>
         </motion.div>
