@@ -56,9 +56,9 @@ export function PracticeSessionView({
   }
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full min-h-svh w-full">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex justify-center p-4 md:p-6">
-        <div className="bg-background/90 border-hair pointer-events-auto max-w-xl border px-5 py-4 backdrop-blur">
+        <div className="bg-background/90 border-hair pointer-events-auto w-full max-w-xl border px-5 py-4 backdrop-blur">
           <p className="kicker text-center">
             {phase === 'present' ? 'Presenting' : 'Q&A'} · {personaLabel}
           </p>
@@ -111,10 +111,10 @@ export function PracticeSessionView({
         audioVisualizerWaveLineWidth={appConfig.audioVisualizerWaveLineWidth}
         preConnectMessage={
           phase === 'present'
-            ? 'Your audience will welcome you — begin when you are ready'
+            ? 'Your audience will welcome you — will begin shortly'
             : 'Answer the audience questions'
         }
-        className="fixed inset-0"
+        className="absolute inset-0"
       />
     </div>
   );

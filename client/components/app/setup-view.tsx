@@ -256,7 +256,7 @@ export function SetupView({
                     onClick={() => setPersona(option.id)}
                     className={cn(
                       'border-hair hover:bg-primary/5 border-b px-1 py-3 text-left transition-colors sm:odd:border-r sm:px-4',
-                      selected && 'bg-primary/5'
+                      selected && 'bg-primary/10 ring-2 ring-inset ring-primary'
                     )}
                   >
                     <div className="text-foreground text-sm font-semibold">{option.label}</div>

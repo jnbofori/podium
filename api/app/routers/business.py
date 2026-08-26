@@ -255,6 +255,7 @@ async def livekit_token(
         payload = mint_livekit_token(
             user_id=user.id,
             user_email=user.email,
+            display_name=user.display_name,
             session=session,
             deck=session.deck,
         )

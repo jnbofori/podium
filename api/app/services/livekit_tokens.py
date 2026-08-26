@@ -16,6 +16,7 @@ def mint_livekit_token(
     *,
     user_id: uuid.UUID,
     user_email: str,
+    display_name: str | None,
     session: PracticeSession,
     deck: Deck,
 ) -> dict:
@@ -28,15 +29,15 @@ def mint_livekit_token(
         raise RuntimeError("LiveKit credentials are not configured")
 
     room_name = session.room_name or f"podium_{session.id.hex[:12]}"
+    display = (display_name or "").strip() or user_email.split("@")[0] or "presenter"
     metadata = {
         "persona": session.persona,
         "deckPlainText": deck.plain_text,
         "slideCount": deck.slide_count,
         "fileName": deck.file_name,
         "sessionId": str(session.id),
+        "presenterName": display,
     }
-
-    display = user_email.split("@")[0] or "presenter"
     token = (
         AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
         .with_identity(str(user_id))

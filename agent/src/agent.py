@@ -57,6 +57,7 @@ class SessionState:
     deck_plain_text: str = ""
     slide_count: int = 0
     file_name: str = ""
+    presenter_name: str = ""
     phase: str = "present"
     session_started_at: float = field(default_factory=time.time)
     phase_boundary_sec: float | None = None
@@ -118,9 +119,11 @@ class SilentListener(Agent):
     async def on_enter(self) -> None:
         logger.info("SilentListener active — presentation phase")
         label = get_persona_label(self._state.persona)
+        name = (self._state.presenter_name or "").strip()
+        name_clause = f" Address them by name as {name}." if name else ""
         await self.session.generate_reply(
             instructions=(
-                f"Welcome the presenter briefly as {label}. "
+                f"Welcome the presenter briefly as {label}.{name_clause} "
                 "Introduce yourself in character in one short sentence. "
                 "Then tell them to go ahead and begin whenever they are ready. "
                 "Do not ask presentation questions yet. Keep it to two or three sentences."
@@ -291,6 +294,9 @@ def _parse_metadata(raw: str | None) -> SessionState:
     file_name = data.get("fileName") or data.get("file_name") or ""
     if isinstance(file_name, str):
         state.file_name = file_name
+    presenter_name = data.get("presenterName") or data.get("presenter_name") or ""
+    if isinstance(presenter_name, str):
+        state.presenter_name = presenter_name.strip()
     return state
 
 
