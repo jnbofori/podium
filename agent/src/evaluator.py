@@ -60,6 +60,7 @@ Rules:
 - Include 3-6 moments covering both presentation delivery and Q&A answer quality when possible.
 - For Q&A moments: set question to the interviewer's question and answer to the presenter's reply (quote or close paraphrase from the timed transcript). For delivery-only moments (e.g. fillers, pacing), set question and answer to null.
 - betterApproach must be actionable and specific to that question/answer or delivery issue.
+- audienceFit must reflect how well the presenter adapted to the listed audience panel personas (cite each when multiple).
 - Be specific. Prefer concrete coaching over generic praise.
 - Do not wrap the JSON in markdown.
 """
@@ -251,14 +252,16 @@ def _normalize_moments(raw_moments: Any) -> list[dict[str, Any]]:
 async def evaluate_session(
     evaluator_llm: llm.LLM,
     *,
-    persona: str,
+    personas: list[str],
     deck_plain_text: str,
     transcript: list[dict[str, Any]],
     speech_metrics: SpeechMetrics,
     phase_boundary_sec: float | None,
 ) -> dict[str, Any]:
+    persona_list = personas or ["executive"]
     user_payload = {
-        "persona": persona,
+        "personas": persona_list,
+        "persona": persona_list[0],
         "deckExcerpt": deck_plain_text[:8000],
         "phaseBoundarySec": phase_boundary_sec,
         "speechMetrics": {
@@ -294,7 +297,7 @@ async def evaluate_session(
     except Exception:
         logger.exception("Evaluator LLM failed; using heuristic report")
         report = _heuristic_report(
-            persona, transcript, speech_metrics, phase_boundary_sec
+            persona_list, transcript, speech_metrics, phase_boundary_sec
         )
 
     if not isinstance(report, dict):
@@ -310,16 +313,22 @@ async def evaluate_session(
         "talkTimeSec": speech_metrics.talk_time_sec,
         "wordCount": speech_metrics.word_count,
     }
-    report["persona"] = persona
+    report["personas"] = persona_list
+    report["persona"] = persona_list[0]
     return report
 
 
 def _heuristic_report(
-    persona: str,
+    personas: list[str] | str,
     transcript: list[dict[str, Any]],
     speech_metrics: SpeechMetrics,
     phase_boundary_sec: float | None,
 ) -> dict[str, Any]:
+    if isinstance(personas, str):
+        persona_list = [personas]
+    else:
+        persona_list = personas or ["executive"]
+    persona_label = ", ".join(p.replace("_", " ") for p in persona_list)
     filler_score = max(1, min(10, round(10 - speech_metrics.filler_count * 0.4)))
     pacing_score = 8
     pacing_rationale = f"Speaking rate was about {speech_metrics.words_per_minute} WPM, within a clear range."
@@ -389,7 +398,7 @@ def _heuristic_report(
         )
     return {
         "summary": (
-            f"Heuristic evaluation for a {persona.replace('_', ' ')} audience. "
+            f"Heuristic evaluation for a {persona_label} audience. "
             "Use this as directional coaching while LLM evaluation is unavailable."
         ),
         "scores": {
@@ -414,11 +423,13 @@ def _heuristic_report(
             ),
             "audienceFit": _score(
                 6,
-                f"Audience fit scored neutrally for persona {persona.replace('_', ' ')}.",
+                f"Audience fit scored neutrally for panel: {persona_label}.",
             ),
             "technicalKnowledge": _score(
                 6, "Technical depth not fully assessed in the heuristic fallback."
             ),
         },
         "moments": moments,
+        "personas": persona_list,
+        "persona": persona_list[0],
     }

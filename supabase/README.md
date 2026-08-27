@@ -11,9 +11,11 @@ Podium does **not** use Supabase Auth. FastAPI owns users and JWTs.
 supabase db push
 ```
 
-Schema: `users`, `decks`, `deck_slides`, `practice_sessions` (see `migrations/`).
+Schema: `users`, `decks`, `deck_slides`, `practice_sessions`, `practice_session_personas` (see `migrations/`).
 
-Apply **all** migration files in order (init, then `20260826170000_deck_slides.sql`).
+Apply **all** migration files in order.
+
+Practice sessions store panel members in `practice_session_personas` (exactly two per new session). The legacy `practice_sessions.persona` column remains as the first panel member for convenience.
 
 ## Storage bucket
 

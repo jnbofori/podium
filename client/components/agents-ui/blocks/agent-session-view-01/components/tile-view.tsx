@@ -9,6 +9,10 @@ import {
   useVoiceAssistant,
 } from '@livekit/components-react';
 import { cn } from '@/lib/shadcn/utils';
+import {
+  AUDIENCE_PERSONAS,
+  type AudiencePersonaId,
+} from '@/lib/podium';
 import { AudioVisualizer } from './audio-visualizer';
 
 const ANIMATION_TRANSITION: MotionProps['transition'] = {
@@ -59,7 +63,11 @@ const tileViewClassNames = {
 
 /** Dark-theme floating square (neumorphic dual shadow, modest radius). */
 const FLOATING_SQUARE =
-  'rounded-xl border border-primary/45 bg-[oklch(0.18_0.015_260)] shadow-[8px_8px_18px_oklch(0.08_0.02_260/70%),-6px_-6px_14px_oklch(0.28_0.02_260/45%)]';
+  'rounded-xl border bg-[oklch(0.18_0.015_260)] shadow-[8px_8px_18px_oklch(0.08_0.02_260/70%),-6px_-6px_14px_oklch(0.28_0.02_260/45%)]';
+
+function personaLabel(id: AudiencePersonaId): string {
+  return AUDIENCE_PERSONAS.find((option) => option.id === id)?.label ?? id;
+}
 
 export function useLocalTrackRef(source: Track.Source) {
   const { localParticipant } = useLocalParticipant();
@@ -77,6 +85,8 @@ interface TileLayoutProps {
   /** Dual-pane practice layout: main content left, floating visualizer right. */
   presentationLayout?: boolean;
   mainContent?: React.ReactNode;
+  panelPersonas?: AudiencePersonaId[];
+  activePersonaId?: AudiencePersonaId | null;
   audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
   audioVisualizerColor?: `#${string}`;
   audioVisualizerColorShift?: number;
@@ -93,6 +103,8 @@ export function TileLayout({
   isChatOpen,
   presentationLayout = false,
   mainContent,
+  panelPersonas,
+  activePersonaId,
   audioVisualizerType,
   audioVisualizerColor,
   audioVisualizerColorShift,
@@ -115,6 +127,7 @@ export function TileLayout({
   const isAvatar = agentVideoTrack !== undefined;
   const videoWidth = agentVideoTrack?.publication.dimensions?.width ?? 0;
   const videoHeight = agentVideoTrack?.publication.dimensions?.height ?? 0;
+  const panel = panelPersonas?.length ? panelPersonas.slice(0, 2) : null;
 
   if (presentationLayout) {
     return (
@@ -125,41 +138,99 @@ export function TileLayout({
           </div>
 
           <aside className="pointer-events-none flex w-[min(28%,220px)] shrink-0 flex-col items-center gap-4 pt-1 md:w-[240px]">
-            <div
-              className={cn(
-                FLOATING_SQUARE,
-                'pointer-events-none relative flex aspect-square w-full max-w-[220px] items-center justify-center overflow-hidden'
-              )}
-            >
-              {!isAvatar ? (
-                <AudioVisualizer
-                  key="audio-visualizer"
-                  audioVisualizerType={audioVisualizerType}
-                  audioVisualizerColor={audioVisualizerColor}
-                  audioVisualizerColorShift={audioVisualizerColorShift}
-                  audioVisualizerBarCount={audioVisualizerBarCount}
-                  audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
-                  audioVisualizerRadialRadius={audioVisualizerRadialRadius}
-                  audioVisualizerGridRowCount={audioVisualizerGridRowCount}
-                  audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
-                  audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
-                  themeMode={themeMode}
-                  isChatOpen={false}
-                  className="size-[160px] md:size-[180px]"
-                  style={{ color: audioVisualizerColor }}
-                />
-              ) : (
-                <VideoTrack
-                  width={videoWidth}
-                  height={videoHeight}
-                  trackRef={agentVideoTrack}
-                  className="size-full object-cover"
-                />
-              )}
-            </div>
+            {panel ? (
+              panel.map((personaId) => {
+                const active = (activePersonaId ?? panel[0]) === personaId;
+                return (
+                  <div key={personaId} className="flex w-full max-w-[220px] flex-col items-center gap-2">
+                    <p
+                      className={cn(
+                        'kicker text-center transition-colors',
+                        active ? 'text-primary' : 'text-muted-foreground'
+                      )}
+                    >
+                      {personaLabel(personaId)}
+                    </p>
+                    <div
+                      className={cn(
+                        FLOATING_SQUARE,
+                        'pointer-events-none relative flex aspect-square w-full items-center justify-center overflow-hidden transition-[border-color,opacity]',
+                        active
+                          ? 'border-primary opacity-100'
+                          : 'border-hair opacity-55'
+                      )}
+                    >
+                      {!isAvatar ? (
+                        <AudioVisualizer
+                          key={`viz-${personaId}`}
+                          audioVisualizerType={audioVisualizerType}
+                          audioVisualizerColor={audioVisualizerColor}
+                          audioVisualizerColorShift={audioVisualizerColorShift}
+                          audioVisualizerBarCount={audioVisualizerBarCount}
+                          audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
+                          audioVisualizerRadialRadius={audioVisualizerRadialRadius}
+                          audioVisualizerGridRowCount={audioVisualizerGridRowCount}
+                          audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
+                          audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
+                          themeMode={themeMode}
+                          isChatOpen={false}
+                          className={cn(
+                            'size-[120px] md:size-[140px]',
+                            !active && 'opacity-40'
+                          )}
+                          style={{ color: audioVisualizerColor }}
+                        />
+                      ) : (
+                        active && (
+                          <VideoTrack
+                            width={videoWidth}
+                            height={videoHeight}
+                            trackRef={agentVideoTrack}
+                            className="size-full object-cover"
+                          />
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div
+                className={cn(
+                  FLOATING_SQUARE,
+                  'pointer-events-none relative flex aspect-square w-full max-w-[220px] items-center justify-center overflow-hidden border-primary/45'
+                )}
+              >
+                {!isAvatar ? (
+                  <AudioVisualizer
+                    key="audio-visualizer"
+                    audioVisualizerType={audioVisualizerType}
+                    audioVisualizerColor={audioVisualizerColor}
+                    audioVisualizerColorShift={audioVisualizerColorShift}
+                    audioVisualizerBarCount={audioVisualizerBarCount}
+                    audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
+                    audioVisualizerRadialRadius={audioVisualizerRadialRadius}
+                    audioVisualizerGridRowCount={audioVisualizerGridRowCount}
+                    audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
+                    audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
+                    themeMode={themeMode}
+                    isChatOpen={false}
+                    className="size-[160px] md:size-[180px]"
+                    style={{ color: audioVisualizerColor }}
+                  />
+                ) : (
+                  <VideoTrack
+                    width={videoWidth}
+                    height={videoHeight}
+                    trackRef={agentVideoTrack}
+                    className="size-full object-cover"
+                  />
+                )}
+              </div>
+            )}
 
             {hasSecondTile && (
-              <div className={cn(FLOATING_SQUARE, 'overflow-hidden')}>
+              <div className={cn(FLOATING_SQUARE, 'overflow-hidden border-primary/45')}>
                 <VideoTrack
                   trackRef={cameraTrack || screenShareTrack}
                   width={(cameraTrack || screenShareTrack)?.publication.dimensions?.width ?? 0}

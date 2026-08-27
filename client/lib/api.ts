@@ -27,6 +27,7 @@ export type ApiSession = {
   id: string;
   deck_id: string;
   persona: string;
+  personas: string[];
   status: string;
   room_name: string | null;
   feedback: Record<string, unknown> | null;
@@ -164,7 +165,7 @@ export async function getDeckSlides(deckId: string) {
   return apiFetch<ApiDeckSlide[]>(`/decks/${deckId}/slides`);
 }
 
-export async function createSession(args: { deck_id: string; persona: string }) {
+export async function createSession(args: { deck_id: string; personas: string[] }) {
   return apiFetch<ApiSession>('/sessions', {
     method: 'POST',
     body: JSON.stringify(args),

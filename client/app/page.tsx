@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/app/auth-provider';
 import { Button } from '@/components/ui/button';
 import { listDecks, listSessions, type ApiDeck, type ApiSession } from '@/lib/api';
+import { formatPersonaLabels } from '@/lib/podium';
 
 export default function HubPage() {
   const { user, ready } = useAuth();
@@ -159,7 +160,9 @@ export default function HubPage() {
                 <Link href={`/history/${session.id}`} className="block hover:opacity-80">
                   <p className="text-sm font-medium">
                     {session.deck_file_name ?? 'Deck'} ·{' '}
-                    {session.persona.replaceAll('_', ' ')}
+                    {formatPersonaLabels(
+                      session.personas?.length ? session.personas : [session.persona]
+                    )}
                   </p>
                   <p className="text-faint mt-0.5 font-mono text-[10px] tracking-wide uppercase">
                     {new Date(session.started_at).toLocaleString()} · {session.status}

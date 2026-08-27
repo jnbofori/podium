@@ -6,14 +6,14 @@ import type { AppConfig } from '@/app-config';
 import { AgentSessionView_01 } from '@/components/agents-ui/blocks/agent-session-view-01';
 import { SlideViewer } from '@/components/app/slide-viewer';
 import { Button } from '@/components/ui/button';
-import { usePodiumControls } from '@/hooks/use-podium-room';
+import { usePodiumControls, usePodiumSpeaker } from '@/hooks/use-podium-room';
 import type { AudiencePersonaId, SessionPhase } from '@/lib/podium';
-import { AUDIENCE_PERSONAS } from '@/lib/podium';
+import { formatPersonaLabels } from '@/lib/podium';
 
 interface PracticeSessionViewProps {
   appConfig: AppConfig;
   phase: Extract<SessionPhase, 'present' | 'qa'>;
-  persona: AudiencePersonaId;
+  personas: AudiencePersonaId[];
   deckId: string | null;
   onPhaseChange: (phase: Extract<SessionPhase, 'present' | 'qa'>) => void;
   onRequestFeedback: () => void;
@@ -22,7 +22,7 @@ interface PracticeSessionViewProps {
 export function PracticeSessionView({
   appConfig,
   phase,
-  persona,
+  personas,
   deckId,
   onPhaseChange,
   onRequestFeedback,
@@ -30,8 +30,9 @@ export function PracticeSessionView({
 }: React.ComponentProps<'section'> & PracticeSessionViewProps) {
   const { resolvedTheme } = useTheme();
   const { endPresentation, endSession, sending } = usePodiumControls();
+  const { activePersonaId } = usePodiumSpeaker(personas[0] ?? null);
   const [localBusy, setLocalBusy] = useState(false);
-  const personaLabel = AUDIENCE_PERSONAS.find((item) => item.id === persona)?.label ?? 'Audience';
+  const personaLabel = formatPersonaLabels(personas);
 
   async function handleEndPresentation() {
     setLocalBusy(true);
@@ -113,6 +114,8 @@ export function PracticeSessionView({
         audioVisualizerRadialRadius={appConfig.audioVisualizerRadialRadius}
         audioVisualizerWaveLineWidth={appConfig.audioVisualizerWaveLineWidth}
         presentationLayout
+        panelPersonas={personas}
+        activePersonaId={activePersonaId}
         mainContent={
           deckId ? (
             <SlideViewer deckId={deckId} className="h-full min-h-0" />
@@ -122,7 +125,7 @@ export function PracticeSessionView({
         }
         preConnectMessage={
           phase === 'present'
-            ? 'Your audience will welcome you — begin when you are ready'
+            ? 'Your audience will welcome you — we will begin shortly'
             : 'Answer the audience questions'
         }
         className="absolute inset-0"

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/app/auth-provider';
 import { listSessions, type ApiSession } from '@/lib/api';
+import { formatPersonaLabels } from '@/lib/podium';
 
 export default function HistoryPage() {
   const { user, ready } = useAuth();
@@ -49,7 +50,8 @@ export default function HistoryPage() {
             <li key={session.id} className="border-hair border-b py-4">
               <Link href={`/history/${session.id}`} className="block hover:opacity-80">
                 <p className="text-sm font-medium">
-                  {session.deck_file_name ?? 'Deck'} · {session.persona.replaceAll('_', ' ')}
+                  {session.deck_file_name ?? 'Deck'} ·{' '}
+                  {formatPersonaLabels(session.personas?.length ? session.personas : [session.persona])}
                 </p>
                 <p className="text-faint mt-0.5 font-mono text-[10px] tracking-wide uppercase">
                   {new Date(session.started_at).toLocaleString()} · {session.status}

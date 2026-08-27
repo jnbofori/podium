@@ -30,8 +30,12 @@ def mint_livekit_token(
 
     room_name = session.room_name or f"podium_{session.id.hex[:12]}"
     display = (display_name or "").strip() or user_email.split("@")[0] or "presenter"
+    persona_ids = [p.persona for p in session.session_personas]
+    if not persona_ids and session.persona:
+        persona_ids = [session.persona]
     metadata = {
-        "persona": session.persona,
+        "persona": persona_ids[0] if persona_ids else session.persona,
+        "personas": persona_ids,
         "deckPlainText": deck.plain_text,
         "slideCount": deck.slide_count,
         "fileName": deck.file_name,

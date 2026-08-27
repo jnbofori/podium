@@ -52,7 +52,7 @@ class DeckSlideOut(BaseModel):
 
 class SessionCreate(BaseModel):
     deck_id: uuid.UUID
-    persona: str
+    personas: list[str] = Field(min_length=2, max_length=2)
 
 
 class SessionUpdate(BaseModel):
@@ -69,6 +69,7 @@ class SessionOut(BaseModel):
     id: uuid.UUID
     deck_id: uuid.UUID
     persona: str
+    personas: list[str] = Field(default_factory=list)
     status: str
     room_name: str | None
     feedback: dict[str, Any] | None

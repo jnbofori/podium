@@ -121,3 +121,26 @@ class PracticeSession(Base):
 
     user: Mapped[User] = relationship(back_populates="sessions")
     deck: Mapped[Deck] = relationship(back_populates="sessions")
+    session_personas: Mapped[list[PracticeSessionPersona]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="PracticeSessionPersona.sort_order",
+    )
+
+
+class PracticeSessionPersona(Base):
+    __tablename__ = "practice_session_personas"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("practice_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    persona: Mapped[str] = mapped_column(String(64), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    session: Mapped[PracticeSession] = relationship(back_populates="session_personas")

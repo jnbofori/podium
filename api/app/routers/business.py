@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db import get_db
-from app.models import Deck, DeckSlide, PracticeSession, User
+from app.models import Deck, DeckSlide, PracticeSession, PracticeSessionPersona, User
 from app.schemas import (
     DeckOut,
     DeckSlideOut,
@@ -66,11 +66,20 @@ def _slide_outs(slides: list[DeckSlide]) -> list[DeckSlideOut]:
     ]
 
 
+def _session_persona_ids(session: PracticeSession) -> list[str]:
+    rows = sorted(session.session_personas, key=lambda p: p.sort_order)
+    if rows:
+        return [p.persona for p in rows]
+    return [session.persona] if session.persona else []
+
+
 def _session_out(session: PracticeSession) -> SessionOut:
+    personas = _session_persona_ids(session)
     return SessionOut(
         id=session.id,
         deck_id=session.deck_id,
-        persona=session.persona,
+        persona=personas[0] if personas else session.persona,
+        personas=personas,
         status=session.status,
         room_name=session.room_name,
         feedback=session.feedback,
@@ -81,6 +90,28 @@ def _session_out(session: PracticeSession) -> SessionOut:
         completed_at=session.completed_at,
         deck_file_name=session.deck.file_name if session.deck else None,
     )
+
+
+def _session_load_options():
+    return (
+        selectinload(PracticeSession.deck),
+        selectinload(PracticeSession.session_personas),
+    )
+
+
+def _validate_personas(personas: list[str]) -> list[str]:
+    if len(personas) != 2:
+        raise HTTPException(
+            status_code=400, detail="Select exactly two audience personas"
+        )
+    cleaned = [p.strip() for p in personas]
+    if any(p not in PERSONAS for p in cleaned):
+        raise HTTPException(status_code=400, detail="Invalid persona")
+    if cleaned[0] == cleaned[1]:
+        raise HTTPException(
+            status_code=400, detail="Choose two different audience personas"
+        )
+    return cleaned
 
 
 @router.post("/decks", response_model=DeckOut)
@@ -236,8 +267,7 @@ async def create_session(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if body.persona not in PERSONAS:
-        raise HTTPException(status_code=400, detail="Invalid persona")
+    personas = _validate_personas(body.personas)
     deck_result = await db.execute(
         select(Deck).where(Deck.id == body.deck_id, Deck.user_id == user.id)
     )
@@ -248,15 +278,19 @@ async def create_session(
     session = PracticeSession(
         user_id=user.id,
         deck_id=deck.id,
-        persona=body.persona,
+        persona=personas[0],
         status="in_progress",
         room_name=f"podium_{uuid.uuid4().hex[:12]}",
+        session_personas=[
+            PracticeSessionPersona(persona=personas[0], sort_order=0),
+            PracticeSessionPersona(persona=personas[1], sort_order=1),
+        ],
     )
     db.add(session)
     await db.commit()
     result = await db.execute(
         select(PracticeSession)
-        .options(selectinload(PracticeSession.deck))
+        .options(*_session_load_options())
         .where(PracticeSession.id == session.id)
     )
     session = result.scalar_one()
@@ -270,7 +304,7 @@ async def list_sessions(
 ):
     result = await db.execute(
         select(PracticeSession)
-        .options(selectinload(PracticeSession.deck))
+        .options(*_session_load_options())
         .where(PracticeSession.user_id == user.id)
         .order_by(PracticeSession.started_at.desc())
     )
@@ -285,7 +319,7 @@ async def get_session(
 ):
     result = await db.execute(
         select(PracticeSession)
-        .options(selectinload(PracticeSession.deck))
+        .options(*_session_load_options())
         .where(PracticeSession.id == session_id, PracticeSession.user_id == user.id)
     )
     session = result.scalar_one_or_none()
@@ -305,7 +339,7 @@ async def update_session(
 
     result = await db.execute(
         select(PracticeSession)
-        .options(selectinload(PracticeSession.deck))
+        .options(*_session_load_options())
         .where(PracticeSession.id == session_id, PracticeSession.user_id == user.id)
     )
     session = result.scalar_one_or_none()
@@ -325,7 +359,12 @@ async def update_session(
             session.completed_at = datetime.now(UTC)
 
     await db.commit()
-    await db.refresh(session)
+    result = await db.execute(
+        select(PracticeSession)
+        .options(*_session_load_options())
+        .where(PracticeSession.id == session.id)
+    )
+    session = result.scalar_one()
     return _session_out(session)
 
 
@@ -337,7 +376,7 @@ async def livekit_token(
 ):
     result = await db.execute(
         select(PracticeSession)
-        .options(selectinload(PracticeSession.deck))
+        .options(*_session_load_options())
         .where(
             PracticeSession.id == body.session_id, PracticeSession.user_id == user.id
         )

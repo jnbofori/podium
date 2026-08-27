@@ -8,7 +8,10 @@ import {
   FEEDBACK_TOPIC,
   type FeedbackReport,
   PHASE_TOPIC,
+  SPEAKER_TOPIC,
+  type AudiencePersonaId,
   type SessionPhase,
+  isAudiencePersonaId,
 } from '@/lib/podium';
 
 function decodePayload(payload: Uint8Array): string {
@@ -60,6 +63,46 @@ export function usePodiumRoomEvents(args: {
       room.off(RoomEvent.DataReceived, onData);
     };
   }, [room]);
+}
+
+export function usePodiumSpeaker(initialPersonaId: AudiencePersonaId | null) {
+  const session = useSessionContext();
+  const room = session.room as Room | undefined;
+  const [activePersonaId, setActivePersonaId] = useState<AudiencePersonaId | null>(
+    initialPersonaId
+  );
+
+  useEffect(() => {
+    setActivePersonaId(initialPersonaId);
+  }, [initialPersonaId]);
+
+  useEffect(() => {
+    if (!room) return;
+
+    const onData = (
+      payload: Uint8Array,
+      _participant?: unknown,
+      _kind?: unknown,
+      topic?: string
+    ) => {
+      if (topic !== SPEAKER_TOPIC) return;
+      try {
+        const parsed = JSON.parse(decodePayload(payload)) as { persona?: string };
+        if (parsed.persona && isAudiencePersonaId(parsed.persona)) {
+          setActivePersonaId(parsed.persona);
+        }
+      } catch (error) {
+        console.error('Failed to parse speaker message', error);
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, onData);
+    return () => {
+      room.off(RoomEvent.DataReceived, onData);
+    };
+  }, [room]);
+
+  return { activePersonaId };
 }
 
 export function usePodiumControls() {

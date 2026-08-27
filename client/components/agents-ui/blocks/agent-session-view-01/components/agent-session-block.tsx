@@ -8,6 +8,7 @@ import {
   AgentControlBar,
   type AgentControlBarControls,
 } from '@/components/agents-ui/agent-control-bar';
+import type { AudiencePersonaId } from '@/lib/podium';
 import { cn } from '@/lib/shadcn/utils';
 import { TileLayout } from './tile-view';
 
@@ -161,6 +162,10 @@ export interface AgentSessionView_01Props {
   presentationLayout?: boolean;
   /** Content shown in the main column when `presentationLayout` is true. */
   mainContent?: React.ReactNode;
+  /** Panel members shown as side floating visualizers. */
+  panelPersonas?: AudiencePersonaId[];
+  /** Which panel member is currently speaking. */
+  activePersonaId?: AudiencePersonaId | null;
   /** Optional class name merged onto the outer `<section>` container. */
   className?: string;
 }
@@ -182,6 +187,8 @@ export function AgentSessionView_01({
   audioVisualizerWaveLineWidth,
   presentationLayout = false,
   mainContent,
+  panelPersonas,
+  activePersonaId,
   themeMode,
   ref,
   className,
@@ -239,6 +246,8 @@ export function AgentSessionView_01({
         themeMode={themeMode}
         presentationLayout={presentationLayout}
         mainContent={mainContent}
+        panelPersonas={panelPersonas}
+        activePersonaId={activePersonaId}
         audioVisualizerType={audioVisualizerType}
         audioVisualizerColor={audioVisualizerColor}
         audioVisualizerColorShift={audioVisualizerColorShift}

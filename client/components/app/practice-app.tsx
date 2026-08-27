@@ -68,12 +68,12 @@ export function PracticeApp({ appConfig }: PracticeAppProps) {
   );
 
   async function handlePrepareAndStart(args: {
-    persona: AudiencePersonaId;
+    personas: AudiencePersonaId[];
     deck: PracticeDeckSelection;
   }) {
     const created = await createSession({
       deck_id: args.deck.id,
-      persona: args.persona,
+      personas: args.personas,
     });
     sessionIdRef.current = created.id;
     setPracticeSessionId(created.id);

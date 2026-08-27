@@ -58,7 +58,7 @@ cd agent && uv sync && uv run python src/agent.py dev
 cd client && pnpm install && pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Register an account, upload a deck, practice.
+Open [http://localhost:3000](http://localhost:3000). Register an account, upload a deck, pick **two** audience personas, practice.
 
 ## Deploy
 

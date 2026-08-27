@@ -30,7 +30,15 @@ from evaluator import (
     compute_speech_metrics,
     evaluate_session,
 )
-from personas import get_persona_label, get_persona_prompt
+from personas import (
+    DEFAULT_VOICE,
+    PERSONA_VOICES,
+    TTS_MODEL,
+    get_panel_labels,
+    get_panel_prompt,
+    get_persona_label,
+    tts_descriptor,
+)
 
 logger = logging.getLogger("podium")
 
@@ -39,6 +47,7 @@ load_dotenv(".env.local")
 CONTROL_TOPIC = "podium.control"
 FEEDBACK_TOPIC = "feedback.report"
 PHASE_TOPIC = "podium.phase"
+SPEAKER_TOPIC = "podium.speaker"
 
 VOICE_OUTPUT_RULES = textwrap.dedent(
     """\
@@ -53,7 +62,8 @@ VOICE_OUTPUT_RULES = textwrap.dedent(
 
 @dataclass
 class SessionState:
-    persona: str = "executive"
+    personas: list[str] = field(default_factory=lambda: ["executive"])
+    active_persona_index: int = 0
     deck_plain_text: str = ""
     slide_count: int = 0
     file_name: str = ""
@@ -62,6 +72,10 @@ class SessionState:
     session_started_at: float = field(default_factory=time.time)
     phase_boundary_sec: float | None = None
     feedback_sent: bool = False
+
+    @property
+    def persona(self) -> str:
+        return self.personas[0] if self.personas else "executive"
 
 
 def _ready_for_questions(text: str) -> bool:
@@ -80,7 +94,7 @@ def _deck_context_message(state: SessionState) -> str:
     return textwrap.dedent(
         f"""\
         Presentation context for this practice session:
-        Audience persona: {get_persona_label(state.persona)}
+        Audience panel: {get_panel_labels(state.personas)}
         Slide count: {state.slide_count}
         File: {state.file_name or "uploaded deck"}
 
@@ -90,17 +104,37 @@ def _deck_context_message(state: SessionState) -> str:
     )
 
 
+def apply_persona_voice(agent: Agent, persona_id: str) -> None:
+    agent.update_options(tts=tts_descriptor(persona_id))
+
+
+def current_persona(state: SessionState) -> str:
+    if not state.personas:
+        return "executive"
+    return state.personas[state.active_persona_index % len(state.personas)]
+
+
+def advance_persona(state: SessionState) -> str:
+    persona_id = current_persona(state)
+    if state.personas:
+        state.active_persona_index = (state.active_persona_index + 1) % len(
+            state.personas
+        )
+    return persona_id
+
+
 class SilentListener(Agent):
     def __init__(
         self, state: SessionState, chat_ctx: ChatContext | None = None
     ) -> None:
-        persona_prompt = get_persona_prompt(state.persona)
+        panel_prompt = get_panel_prompt(state.personas)
+        print("panel_prompt", panel_prompt)
         super().__init__(
             chat_ctx=chat_ctx,
             instructions=textwrap.dedent(
                 f"""\
                 You are an audience member for a presentation practice session.
-                {persona_prompt}
+                {panel_prompt}
 
                 At the start of the session you give a brief welcome and introduction,
                 then invite the presenter to begin when ready.
@@ -113,22 +147,51 @@ class SilentListener(Agent):
                 {_deck_context_message(state)}
                 """
             ),
+            tts=tts_descriptor(state.persona),
         )
         self._state = state
 
     async def on_enter(self) -> None:
         logger.info("SilentListener active — presentation phase")
-        label = get_persona_label(self._state.persona)
+        controller: PodiumController = self.session.userdata
         name = (self._state.presenter_name or "").strip()
         name_clause = f" Address them by name as {name}." if name else ""
-        await self.session.generate_reply(
-            instructions=(
-                f"Welcome the presenter briefly as {label}.{name_clause} "
-                "Introduce yourself in character in one short sentence. "
-                "Then tell them to go ahead and begin whenever they are ready. "
-                "Do not ask presentation questions yet. Keep it to two or three sentences."
+        personas = self._state.personas or ["executive"]
+
+        if len(personas) >= 2:
+            for persona_id in personas:
+                apply_persona_voice(self, persona_id)
+                await controller.publish_speaker(persona_id)
+                label = get_persona_label(persona_id)
+                await self.session.generate_reply(
+                    instructions=(
+                        f"Speak only as {label}.{name_clause} "
+                        f"Introduce yourself in character in one short sentence. "
+                        "Do not ask presentation questions yet."
+                    )
+                )
+            apply_persona_voice(self, personas[0])
+            await controller.publish_speaker(personas[0])
+            await self.session.generate_reply(
+                instructions=(
+                    "As the panel, briefly tell the presenter to go ahead and begin "
+                    "whenever they are ready. Keep it to one sentence. "
+                    "Do not ask presentation questions yet."
+                )
             )
-        )
+        else:
+            persona_id = personas[0]
+            apply_persona_voice(self, persona_id)
+            await controller.publish_speaker(persona_id)
+            label = get_persona_label(persona_id)
+            await self.session.generate_reply(
+                instructions=(
+                    f"Welcome the presenter briefly as {label}.{name_clause} "
+                    "Introduce yourself in character in one short sentence. "
+                    "Then tell them to go ahead and begin whenever they are ready. "
+                    "Do not ask presentation questions yet. Keep it to two or three sentences."
+                )
+            )
 
     async def on_user_turn_completed(
         self, turn_ctx: ChatContext, new_message: ChatMessage
@@ -151,37 +214,63 @@ class AudienceInterviewer(Agent):
     def __init__(
         self, state: SessionState, chat_ctx: ChatContext | None = None
     ) -> None:
-        persona_prompt = get_persona_prompt(state.persona)
+        panel_prompt = get_panel_prompt(state.personas)
+        question_budget = min(8, max(5, getattr(state, "question_budget", len(state.personas))))
+        # question_budget = max(1, len(state.personas))
         super().__init__(
             chat_ctx=chat_ctx,
             instructions=textwrap.dedent(
-                # todo: change prompt to be something like "person on a presentation panel"
                 f"""\
                 You are the AI Interviewer for a presentation practice app.
-                {persona_prompt}
+                {panel_prompt}
 
                 Ground every question in the uploaded deck and what the presenter actually said.
                 Do not use a fixed question bank. Ask one question at a time.
                 After an answer, briefly acknowledge, then ask the next question.
-                Aim for about 1 question total, then invite the presenter to wrap up.
-                Stay in character for the chosen audience.
+                Aim for about {question_budget} question(s) total across the panel,
+                then invite the presenter to wrap up.
 
                 {VOICE_OUTPUT_RULES}
 
                 {_deck_context_message(state)}
                 """
             ),
+            tts=tts_descriptor(state.persona),
         )
         self._state = state
 
+    async def _prepare_speaker(self) -> str:
+        controller: PodiumController = self.session.userdata
+        persona_id = advance_persona(self._state)
+        apply_persona_voice(self, persona_id)
+        await controller.publish_speaker(persona_id)
+        return persona_id
+
     async def on_enter(self) -> None:
         logger.info("AudienceInterviewer active — Q&A phase")
+        self._state.active_persona_index = 0
+        persona_id = await self._prepare_speaker()
+        label = get_persona_label(persona_id)
         await self.session.generate_reply(
             instructions=(
-                "The presentation phase just ended. Briefly introduce yourself as this audience "
-                "persona in one short sentence, then ask your first challenging question grounded "
-                "in the deck and presentation."
+                f"The presentation phase just ended. Speak only as {label}. "
+                "Briefly introduce yourself in one short sentence, then ask your first "
+                "challenging question grounded in the deck and presentation."
             )
+        )
+
+    async def on_user_turn_completed(
+        self, turn_ctx: ChatContext, new_message: ChatMessage
+    ) -> None:
+        persona_id = await self._prepare_speaker()
+        label = get_persona_label(persona_id)
+        # Nudge the upcoming reply to stay in the active persona; default pipeline continues.
+        turn_ctx.add_message(
+            role="system",
+            content=(
+                f"For this turn, speak only as {label}. "
+                "Acknowledge briefly if needed, then ask one question or invite wrap-up."
+            ),
         )
 
 
@@ -203,6 +292,18 @@ class PodiumController:
             topic=PHASE_TOPIC,
         )
 
+    async def publish_speaker(self, persona_id: str) -> None:
+        try:
+            index = self.state.personas.index(persona_id)
+        except ValueError:
+            index = 0
+        payload = json.dumps({"persona": persona_id, "index": index})
+        await self.ctx.room.local_participant.publish_data(
+            payload,
+            reliable=True,
+            topic=SPEAKER_TOPIC,
+        )
+
     async def transition_to_qa(self, reason: str = "control") -> None:
         if self._qa_started:
             return
@@ -211,6 +312,7 @@ class PodiumController:
         self.state.phase_boundary_sec = max(
             0.0, time.time() - self.state.session_started_at
         )
+        self.state.active_persona_index = 0
         logger.info(
             "Transitioning to Q&A (%s) at %.1fs", reason, self.state.phase_boundary_sec
         )
@@ -243,7 +345,7 @@ class PodiumController:
             evaluator_llm = inference.LLM(model="google/gemma-4-31b-it")
             report = await evaluate_session(
                 evaluator_llm,
-                persona=self.state.persona,
+                personas=self.state.personas,
                 deck_plain_text=self.state.deck_plain_text,
                 transcript=transcript,
                 speech_metrics=metrics,
@@ -280,9 +382,17 @@ def _parse_metadata(raw: str | None) -> SessionState:
         logger.warning("Invalid job metadata JSON")
         return state
 
-    persona = data.get("persona")
-    if isinstance(persona, str) and persona:
-        state.persona = persona
+    personas_raw = data.get("personas")
+    personas: list[str] = []
+    if isinstance(personas_raw, list):
+        personas = [p for p in personas_raw if isinstance(p, str) and p.strip()]
+    if not personas:
+        persona = data.get("persona")
+        if isinstance(persona, str) and persona:
+            personas = [persona]
+    if personas:
+        state.personas = personas
+
     deck = data.get("deckPlainText") or data.get("deck_plain_text") or ""
     if isinstance(deck, str):
         state.deck_plain_text = deck
@@ -314,15 +424,16 @@ async def podium_agent(ctx: JobContext):
     state = _parse_metadata(ctx.job.metadata)
     state.session_started_at = time.time()
     logger.info(
-        "Starting Podium session persona=%s slides=%s",
-        state.persona,
+        "Starting Podium session personas=%s slides=%s",
+        state.personas,
         state.slide_count,
     )
 
     session = AgentSession(
         stt=inference.STT(model="assemblyai/universal-3-5-pro", language="en"),
         tts=inference.TTS(
-            model="fishaudio/s2.1-pro", voice="fa4c9eb3dccc4806b382b40d61c6b10a"
+            model=TTS_MODEL,
+            voice=PERSONA_VOICES.get(state.persona, DEFAULT_VOICE),
         ),
         llm=inference.LLM(model="google/gemma-4-31b-it"),
         turn_handling=TurnHandlingOptions(
@@ -339,6 +450,8 @@ async def podium_agent(ctx: JobContext):
     initial_ctx = ChatContext()
     initial_ctx.add_message(role="system", content=_deck_context_message(state))
 
+    await ctx.connect()
+
     await session.start(
         agent=SilentListener(state, chat_ctx=initial_ctx),
         room=ctx.room,
@@ -351,7 +464,6 @@ async def podium_agent(ctx: JobContext):
         ),
     )
 
-    await ctx.connect()
     await controller.publish_phase("present")
 
     @ctx.room.on("data_received")

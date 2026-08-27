@@ -51,6 +51,7 @@ export type ParsedDeck = {
 
 export type PodiumJobMetadata = {
   persona: AudiencePersonaId;
+  personas?: AudiencePersonaId[];
   deckPlainText: string;
   slideCount: number;
   fileName?: string;
@@ -96,11 +97,24 @@ export type FeedbackReport = {
     wordCount?: number;
   };
   persona?: AudiencePersonaId;
+  personas?: AudiencePersonaId[];
 };
 
 export const CONTROL_TOPIC = 'podium.control';
 export const FEEDBACK_TOPIC = 'feedback.report';
 export const PHASE_TOPIC = 'podium.phase';
+export const SPEAKER_TOPIC = 'podium.speaker';
+
+export function formatPersonaLabels(personas: string[]): string {
+  const labels = personas.map((id) => {
+    const match = AUDIENCE_PERSONAS.find((option) => option.id === id);
+    return match?.label ?? id.replaceAll('_', ' ');
+  });
+  if (labels.length === 0) return 'Audience';
+  if (labels.length === 1) return labels[0]!;
+  if (labels.length === 2) return `${labels[0]} · ${labels[1]}`;
+  return labels.join(' · ');
+}
 
 export function truncateDeckText(text: string, limit = DECK_TEXT_LIMIT): string {
   if (text.length <= limit) return text;

@@ -7,7 +7,7 @@ import { listDecks, uploadDeck, type ApiDeck } from '@/lib/api';
 import {
   AUDIENCE_PERSONAS,
   type AudiencePersonaId,
-  isAudiencePersonaId,
+  formatPersonaLabels,
 } from '@/lib/podium';
 import { cn } from '@/lib/shadcn/utils';
 
@@ -22,12 +22,14 @@ interface SetupViewProps {
   startButtonText: string;
   initialDeckId?: string | null;
   onStart: (args: {
-    persona: AudiencePersonaId;
+    personas: AudiencePersonaId[];
     deck: PracticeDeckSelection;
   }) => void | Promise<void>;
 }
 
 type SetupStep = 1 | 2 | 3;
+
+const REQUIRED_PERSONA_COUNT = 2;
 
 export function SetupView({
   startButtonText,
@@ -37,7 +39,10 @@ export function SetupView({
 }: React.ComponentProps<'div'> & SetupViewProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<SetupStep>(1);
-  const [persona, setPersona] = useState<AudiencePersonaId>('executive');
+  const [personas, setPersonas] = useState<AudiencePersonaId[]>([
+    'executive',
+    'technical_lead',
+  ]);
   const [library, setLibrary] = useState<ApiDeck[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(initialDeckId ?? null);
   const [uploaded, setUploaded] = useState<ApiDeck | null>(null);
@@ -85,11 +90,15 @@ export function SetupView({
       setError('Upload or select a PowerPoint deck to begin');
       return;
     }
+    if (personas.length !== REQUIRED_PERSONA_COUNT) {
+      setError('Pick exactly two audience members');
+      return;
+    }
     setStarting(true);
     setError(null);
     try {
       await onStart({
-        persona,
+        personas,
         deck: {
           id: selectedDeck.id,
           fileName: selectedDeck.file_name,
@@ -103,8 +112,20 @@ export function SetupView({
     }
   }
 
-  const personaLabel =
-    AUDIENCE_PERSONAS.find((option) => option.id === persona)?.label ?? persona;
+  function togglePersona(id: AudiencePersonaId) {
+    setPersonas((current) => {
+      if (current.includes(id)) {
+        return current.filter((item) => item !== id);
+      }
+      if (current.length >= REQUIRED_PERSONA_COUNT) {
+        return [...current.slice(1), id];
+      }
+      return [...current, id];
+    });
+  }
+
+  const personaLabel = formatPersonaLabels(personas);
+  const canContinueAudience = personas.length === REQUIRED_PERSONA_COUNT;
 
   return (
     <div ref={ref} className="mx-auto w-full max-w-3xl px-5 py-8 md:px-10 md:py-10">
@@ -129,7 +150,7 @@ export function SetupView({
         {(
           [
             { n: 1, title: 'Choose your deck' },
-            { n: 2, title: 'Pick an audience' },
+            { n: 2, title: 'Pick your panel' },
             { n: 3, title: 'Start practice' },
           ] as const
         ).map((item, index) => (
@@ -146,7 +167,11 @@ export function SetupView({
               type="button"
               className="w-full text-left"
               onClick={() => {
-                if (item.n === 1 || (item.n === 2 && selectedDeckId) || (item.n === 3 && selectedDeckId)) {
+                if (
+                  item.n === 1 ||
+                  (item.n === 2 && selectedDeckId) ||
+                  (item.n === 3 && selectedDeckId && canContinueAudience)
+                ) {
                   setStep(item.n);
                 }
               }}
@@ -246,14 +271,18 @@ export function SetupView({
         {step === 2 && (
           <section>
             <p className="kicker">02 — Audience</p>
+            <p className="text-muted-foreground mt-2 text-xs">
+              Pick exactly two audience members for your practice panel.
+            </p>
             <div className="mt-3 grid gap-0 sm:grid-cols-2">
               {AUDIENCE_PERSONAS.map((option) => {
-                const selected = persona === option.id;
+                const selected = personas.includes(option.id);
                 return (
                   <button
                     key={option.id}
                     type="button"
-                    onClick={() => setPersona(option.id)}
+                    onClick={() => togglePersona(option.id)}
+                    aria-pressed={selected}
                     className={cn(
                       'border-hair hover:bg-primary/5 border-b px-1 py-3 text-left transition-colors sm:odd:border-r sm:px-4',
                       selected && 'bg-primary/10 ring-2 ring-inset ring-primary'
@@ -267,28 +296,19 @@ export function SetupView({
                 );
               })}
             </div>
-            <select
-              className="sr-only"
-              value={persona}
-              onChange={(event) => {
-                if (isAudiencePersonaId(event.target.value)) {
-                  setPersona(event.target.value);
-                }
-              }}
-              aria-hidden
-              tabIndex={-1}
-            >
-              {AUDIENCE_PERSONAS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <p className="text-faint mt-3 font-mono text-[10px] tracking-[0.16em] uppercase">
+              Selected {personas.length}/{REQUIRED_PERSONA_COUNT}
+            </p>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
               <Button size="lg" variant="outline" onClick={() => setStep(1)}>
                 Back
               </Button>
-              <Button size="lg" className="flex-1" onClick={() => setStep(3)}>
+              <Button
+                size="lg"
+                className="flex-1"
+                disabled={!canContinueAudience}
+                onClick={() => setStep(3)}
+              >
                 <span className="stitch" aria-hidden />
                 Continue →
               </Button>

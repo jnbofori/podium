@@ -35,7 +35,7 @@ interface ViewControllerProps {
   initialDeckId?: string | null;
   practiceSessionId: string | null;
   onPrepareSession: (args: {
-    persona: AudiencePersonaId;
+    personas: AudiencePersonaId[];
     deck: PracticeDeckSelection;
   }) => Promise<string>;
 }
@@ -49,7 +49,10 @@ export function ViewController({
   const router = useRouter();
   const session = useSessionContext();
   const [phase, setPhase] = useState<SessionPhase>('setup');
-  const [persona, setPersona] = useState<AudiencePersonaId>('executive');
+  const [personas, setPersonas] = useState<AudiencePersonaId[]>([
+    'executive',
+    'technical_lead',
+  ]);
   const [deckId, setDeckId] = useState<string | null>(initialDeckId ?? null);
   const [report, setReport] = useState<FeedbackReport | null>(null);
   const [awaitingFeedback, setAwaitingFeedback] = useState(false);
@@ -149,10 +152,10 @@ export function ViewController({
   }, [awaitingFeedback, session.isConnected, report]);
 
   async function handleStart(args: {
-    persona: AudiencePersonaId;
+    personas: AudiencePersonaId[];
     deck: PracticeDeckSelection;
   }) {
-    setPersona(args.persona);
+    setPersonas(args.personas);
     setDeckId(args.deck.id);
     setReport(null);
     setFeedbackError(null);
@@ -189,7 +192,7 @@ export function ViewController({
           {...VIEW_MOTION_PROPS}
           appConfig={appConfig}
           phase={phase}
-          persona={persona}
+          personas={personas}
           deckId={deckId}
           onPhaseChange={(next) => {
             if (

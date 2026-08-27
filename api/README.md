@@ -21,6 +21,8 @@ Uploading a deck converts each slide to a PNG for the practice viewer. The API n
 
 Python uses **PyMuPDF** (`pymupdf`) to rasterize the LibreOffice PDF output.
 
+Practice sessions require **exactly two audience personas**. Fish Audio TTS voice IDs per persona live in `agent/src/personas.py`.
+
 Docs: http://localhost:8000/docs
 
 See [root README](../README.md) and [supabase/README.md](../supabase/README.md).
