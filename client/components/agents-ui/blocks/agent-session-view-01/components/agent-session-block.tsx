@@ -275,7 +275,7 @@ export function AgentSessionView_01({
                 aria-hidden={messages.length > 0}
                 {...SHIMMER_MOTION_PROPS}
                 className={cn(
-                  'shimmer shimmer-duration-2000 pointer-events-none mx-auto block w-full pb-4 text-center text-sm font-semibold',
+                  'shimmer shimmer-duration-2000 pointer-events-none mx-auto block w-full pb-2 text-center text-sm font-semibold bg-black pt-2',
                   presentationLayout ? 'max-w-6xl' : 'max-w-2xl'
                 )}
               >

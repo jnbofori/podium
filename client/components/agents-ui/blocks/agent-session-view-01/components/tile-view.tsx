@@ -130,14 +130,8 @@ export function TileLayout({
   const panel = panelPersonas?.length ? panelPersonas.slice(0, 2) : null;
 
   if (presentationLayout) {
-    return (
-      <div className="pointer-events-none absolute inset-x-0 top-36 bottom-28 z-40 px-4 md:top-40 md:bottom-32 md:px-8">
-        <div className="mx-auto flex h-full max-w-6xl gap-5 md:gap-6">
-          <div className="pointer-events-auto flex min-h-0 min-w-0 flex-[3] flex-col">
-            {mainContent}
-          </div>
-
-          <aside className="pointer-events-none flex w-[min(28%,220px)] shrink-0 flex-col items-center gap-4 pt-1 md:w-[240px]">
+    const panelAside = (
+      <aside className="pointer-events-none absolute top-4 right-0 bottom-36 flex w-[min(28%,220px)] flex-col items-center gap-3 md:top-5 md:bottom-44 md:w-[240px]">
             {panel ? (
               panel.map((personaId) => {
                 const active = (activePersonaId ?? panel[0]) === personaId;
@@ -233,17 +227,18 @@ export function TileLayout({
               </div>
             )}
 
-            {hasSecondTile && (
-              <div className={cn(FLOATING_SQUARE, 'overflow-hidden border-primary/45')}>
-                <VideoTrack
-                  trackRef={cameraTrack || screenShareTrack}
-                  width={(cameraTrack || screenShareTrack)?.publication.dimensions?.width ?? 0}
-                  height={(cameraTrack || screenShareTrack)?.publication.dimensions?.height ?? 0}
-                  className="aspect-square size-[96px] object-cover"
-                />
-              </div>
-            )}
-          </aside>
+      </aside>
+    );
+
+    return (
+      <div className="pointer-events-none absolute inset-0 z-40 px-4 md:px-8">
+        <div className="relative mx-auto h-full max-w-6xl">
+          <div className="pointer-events-none absolute top-36 right-[min(28%,220px)] bottom-28 left-0 md:top-40 md:right-[240px] md:bottom-32">
+            <div className="pointer-events-auto flex h-full min-h-0 min-w-0 flex-col pr-5 md:pr-6">
+              {mainContent}
+            </div>
+          </div>
+          {panelAside}
         </div>
       </div>
     );

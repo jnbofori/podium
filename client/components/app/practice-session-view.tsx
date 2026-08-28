@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import type { AppConfig } from '@/app-config';
 import { AgentSessionView_01 } from '@/components/agents-ui/blocks/agent-session-view-01';
+import { PresenterCameraPiP } from '@/components/app/presenter-camera-pip';
 import { SlideViewer } from '@/components/app/slide-viewer';
 import { Button } from '@/components/ui/button';
 import { usePodiumControls, usePodiumSpeaker } from '@/hooks/use-podium-room';
@@ -93,6 +94,8 @@ export function PracticeSessionView({
           </div>
         </div>
       </div>
+
+      <PresenterCameraPiP />
 
       <AgentSessionView_01
         {...motionProps}
