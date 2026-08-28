@@ -161,25 +161,29 @@ export function TileLayout({
                       )}
                     >
                       {!isAvatar ? (
-                        <AudioVisualizer
-                          key={`viz-${personaId}`}
-                          audioVisualizerType={audioVisualizerType}
-                          audioVisualizerColor={audioVisualizerColor}
-                          audioVisualizerColorShift={audioVisualizerColorShift}
-                          audioVisualizerBarCount={audioVisualizerBarCount}
-                          audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
-                          audioVisualizerRadialRadius={audioVisualizerRadialRadius}
-                          audioVisualizerGridRowCount={audioVisualizerGridRowCount}
-                          audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
-                          audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
-                          themeMode={themeMode}
-                          isChatOpen={false}
-                          className={cn(
-                            'size-[120px] md:size-[140px]',
-                            !active && 'opacity-40'
-                          )}
-                          style={{ color: audioVisualizerColor }}
-                        />
+                        active ? (
+                          <AudioVisualizer
+                            key={`viz-${personaId}`}
+                            audioVisualizerType={audioVisualizerType}
+                            audioVisualizerColor={audioVisualizerColor}
+                            audioVisualizerColorShift={audioVisualizerColorShift}
+                            audioVisualizerBarCount={audioVisualizerBarCount}
+                            audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
+                            audioVisualizerRadialRadius={audioVisualizerRadialRadius}
+                            audioVisualizerGridRowCount={audioVisualizerGridRowCount}
+                            audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
+                            audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
+                            themeMode={themeMode}
+                            isChatOpen={false}
+                            className="size-[120px] md:size-[140px]"
+                            style={{ color: audioVisualizerColor }}
+                          />
+                        ) : (
+                          <div
+                            aria-hidden
+                            className="size-[120px] rounded-lg bg-white/5 opacity-40 md:size-[140px]"
+                          />
+                        )
                       ) : (
                         active && (
                           <VideoTrack

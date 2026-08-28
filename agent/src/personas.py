@@ -26,7 +26,7 @@ PERSONA_PROMPTS: dict[str, str] = {
     ),
     "interview_panel": (
         "You are an interview panel running a case-style Q&A. Probe structured thinking, "
-        "prioritization, quantification, and how the candidate handles ambiguity under pressure."
+        "prioritization, quantification, and how the presenter handles ambiguity under pressure."
     ),
 }
 
@@ -52,6 +52,10 @@ PERSONA_VOICES: dict[str, str] = {
 
 TTS_MODEL = "fishaudio/s2.1-pro"
 DEFAULT_VOICE = PERSONA_VOICES["executive"]
+
+
+def persona_voice_id(persona_id: str) -> str:
+    return PERSONA_VOICES.get(persona_id, DEFAULT_VOICE)
 
 
 def get_persona_prompt(persona: str) -> str:
@@ -84,18 +88,18 @@ def get_panel_prompt(personas: list[str]) -> str:
     order = " → ".join(get_persona_label(p) for p in personas)
     return textwrap.dedent(
         f"""\
-        You are simulating a live presentation panel with these members:
+        You are a panel of real stakeholders in this meeting:
         {members}
 
         Panel rules:
         - Speak as exactly ONE panel member per turn. Never blend personas in one reply.
         - Alternate speakers in this order and then repeat: {order}.
         - Start each spoken turn by briefly naming who is speaking (e.g. "As the executive…").
-        - Ask one question at a time. Aim for about one question per panel member, then invite wrap-up.
+        - Ask one question at a time. Aim for 5 to 8 questions total across the panel,
+          then thank them and close the discussion.
         """
     )
 
 
 def tts_descriptor(persona_id: str) -> str:
-    voice = PERSONA_VOICES.get(persona_id, DEFAULT_VOICE)
-    return f"{TTS_MODEL}:{voice}"
+    return f"{TTS_MODEL}:{persona_voice_id(persona_id)}"
