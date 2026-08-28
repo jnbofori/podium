@@ -43,11 +43,11 @@ PERSONA_LABELS: dict[str, str] = {
 # Keep distinct voices so a panel of two is audibly different.
 PERSONA_VOICES: dict[str, str] = {
     "executive": "bf322df2096a46f18c579d0baa36f41d",  # Adrian — friendly male
-    "technical_lead": "536d3a5e000945adb7038665781a4aca",  # Ethan — curious explainer
+    "technical_lead": "933563129e564b19a115bedd57b7406a",  # Sarah — engaged
     "professor": "e3cd384158934cc9a01029cd7d278634",  # Laura — confident narrator
     "investor": "79d0bd3e4e5444b18f7b6d89b5927bf1",  # Jordan — motivational
     "skeptical_stakeholder": "9a9cf47702da476aa4629e2506d4a857",  # Hannah — conversational
-    "interview_panel": "933563129e564b19a115bedd57b7406a",  # Sarah — engaged
+    "interview_panel": "536d3a5e000945adb7038665781a4aca",  # Ethan — curious explainer
 }
 
 TTS_MODEL = "fishaudio/s2.1-pro"

@@ -249,7 +249,7 @@ class AudienceInterviewer(Agent):
                 Do not use a fixed question bank. Ask one question at a time.
                 After an answer, briefly acknowledge, then ask the next question.
                 Aim for 5 to 8 questions total across the panel, then thank them and
-                close the discussion as if you have what you need for a decision. 
+                close the discussion as if you have what you need for a decision.
                 And then let the presenter know to end the meeting.
 
                 {VOICE_OUTPUT_RULES}
