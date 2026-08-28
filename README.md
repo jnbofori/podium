@@ -20,7 +20,7 @@ podium/
 
 ## Supabase setup
 
-1. Create a project and copy the **database connection string** (URI) and **service role** key.
+1. Create a project and copy the **database connection string** (URI) and **service API** or **service role** key.
 2. Run all SQL in [`supabase/migrations/`](supabase/migrations/) in order (SQL editor or `supabase db push`).
 3. Storage → New bucket → name: `decks` → **Private** (not public).
 
@@ -52,7 +52,7 @@ Three terminals:
 cd api && uv sync && uv run uvicorn app.main:app --reload --port 8000
 
 # 2 — voice agent
-cd agent && uv sync && uv run python src/agent.py dev
+cd agent && uv sync && uv run python src/agent.py dev # (could also use lk agent dev if using livekit cli)
 
 # 3 — web UI
 cd client && pnpm install && pnpm dev
@@ -75,4 +75,3 @@ Open [http://localhost:3000](http://localhost:3000). Register an account, upload
 - `.github/workflows/agent.yml` — ruff/pytest agent
 - `.github/workflows/api.yml` — ruff/pytest for FastAPI
 
-See [`supabase/README.md`](supabase/README.md) for migration and private `decks` bucket setup.
